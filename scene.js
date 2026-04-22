@@ -177,7 +177,11 @@
   }
 
   function drawFigure(p) {
-    ctx.strokeStyle = C_FIG; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    const figColor = isDark ? '#f0f0ee' : C_FIG;
+    const eyeColor = isDark ? '#1a1a1a' : '#fafaf8';
+
+    ctx.strokeStyle = figColor; ctx.lineWidth = 2; ctx.lineCap = 'round';
 
     seg(p.lsh,  p.rsh);                               // shoulder bar
     seg(p.neck, p.hip);                               // torso
@@ -187,11 +191,11 @@
     seg(p.hip,  p.rknee); seg(p.rknee, p.rfoot);     // right leg
 
     // Head
-    ctx.fillStyle = C_FIG;
+    ctx.fillStyle = figColor;
     ctx.beginPath(); ctx.arc(p.head[0], p.head[1], 6, 0, Math.PI * 2); ctx.fill();
 
     // Tiny eye — faces right (toward hoop), gives personality
-    ctx.fillStyle = '#fafaf8';
+    ctx.fillStyle = eyeColor;
     ctx.beginPath(); ctx.arc(p.head[0] + 3.5, p.head[1] - 1, 1.2, 0, Math.PI * 2); ctx.fill();
   }
 
