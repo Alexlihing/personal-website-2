@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hobbies · Alex Li</title>
+  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <canvas id="sphere-canvas"></canvas>
+        <div class="identity">
+          <svg class="name-svg" viewBox="0 0 195 54" xmlns="http://www.w3.org/2000/svg" aria-label="Alex Li" role="img">
+              <text x="3" y="43" class="name-text">Alex Li</text>
+            </svg>
+          <p class="tagline">Software Engineer</p>
+        </div>
+      </div>
+      <nav>
+        <a href="index.html">About</a>
+        <a href="photography.html">Photography</a>
+        <a href="hobbies.html" class="active">Hobbies</a>
+        <button id="theme-toggle" aria-label="Toggle dark mode">☾</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p>
+        i try my best to touch a little bit of grass everyday. here's some
+        of my hobbies i've been getting into recently!
+      </p>
+    </section>
+
+    <section>
+      <h2>Currently into</h2>
+      <ul class="entries hobbies-list">
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">photography</span>
+          </div>
+          <p class="entry-sub">the art of slowing down  </p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">running</span>
+          </div>
+          <p class="entry-sub">working towards a half marathon!</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">reading</span>
+          </div>
+          <p class="entry-sub">self-help, philosophy, and sci-fi enjoyer</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">cooking</span>
+          </div>
+          <p class="entry-sub">making my own food in the summer :)</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">climbing</span>
+          </div>
+          <p class="entry-sub">catch me @ movement if you can!</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="text-transform: none;">here's some of my fav songs lately :)</h2>
+      <div class="fan-controls">
+        <button class="fan-btn" id="play-all-btn">
+          <i class="fa-solid fa-play"></i>
+          <span>play all</span>
+        </button>
+        <button class="fan-btn" id="shuffle-btn">
+          <i class="fa-solid fa-shuffle"></i>
+          <span>shuffle</span>
+        </button>
+      </div>
+      <div class="fan-rack">
+
+        <div class="song-card" data-track="1z5ebC9238uGoBgzYyvGpQ" data-video="UeOo_j57d48">
+          <div class="song-art">
+            <img class="art-img" alt="Toxic Till the End" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">toxic till the end</p>
+            <p class="song-artist">ROSÉ</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-UeOo_j57d48"></div></div>
+        </div>
+
+        <div class="song-card" data-track="4RXsi1oTj3uaqoRC9UrwGA" data-video="NhmzKgaoLX0">
+          <div class="song-art">
+            <img class="art-img" alt="I Got You" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">I GOT YOU</p>
+            <p class="song-artist">TWICE</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-NhmzKgaoLX0"></div></div>
+        </div>
+
+        <div class="song-card" data-track="38v9pKVik1eEJhpSuh97oc" data-video="bH13eUiDhmo">
+          <div class="song-art">
+            <img class="art-img" alt="Sovereign Light Café" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">Sovereign Light Café</p>
+            <p class="song-artist">Keane</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-bH13eUiDhmo"></div></div>
+        </div>
+
+        <div class="song-card" data-track="3hEfpBHxgieRLz4t3kLNEg" data-video="tGv7CUutzqU">
+          <div class="song-art">
+            <img class="art-img" alt="About You" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">About You</p>
+            <p class="song-artist">The 1975</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-tGv7CUutzqU"></div></div>
+        </div>
+
+        <div class="song-card" data-track="4e4hweR6AcRDA52vpk4F79" data-video="jhnqXHL9UAE">
+          <div class="song-art">
+            <img class="art-img" alt="When You Know Someone" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">When You Know Someone</p>
+            <p class="song-artist">Valley</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-jhnqXHL9UAE"></div></div>
+        </div>
+
+        <div class="song-card" data-track="0QPdjsMOUhwouq1NS3HwfQ" data-video="_3GKsIFtEoE">
+          <div class="song-art">
+            <img class="art-img" alt="Coming Up Roses" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">Coming Up Roses</p>
+            <p class="song-artist">Harry Styles</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-_3GKsIFtEoE"></div></div>
+        </div>
+
+        <div class="song-card" data-track="49DTiFx70EuJLV7hDsCo6z" data-video="e2majw1AVrw">
+          <div class="song-art">
+            <img class="art-img" alt="We Go Up" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">WE GO UP</p>
+            <p class="song-artist">BABYMONSTER</p>
+          </div>
+          <div class="yt-hidden"><div id="yt-e2majw1AVrw"></div></div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <a href="mailto:alexli9132@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      <a href="https://github.com/AlexLi9132" target="_blank" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+      <a href="https://www.linkedin.com/in/alex-li1/" target="_blank" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="https://drive.google.com/file/d/1liJx27_zMX0FxkSdrukWomMvsUMcoVbl/view?usp=sharing" target="_blank" aria-label="Resume">📄</a>
+    </p>
+  </footer>
+
+  <script>
+    // Album art: Spotify oEmbed if track ID exists, else YouTube thumbnail
+    document.querySelectorAll('.song-card').forEach(async card => {
+      const img = card.querySelector('.art-img');
+      if (card.dataset.track) {
+        try {
+          const res = await fetch(`https://open.spotify.com/oembed?url=https://open.spotify.com/track/${card.dataset.track}`);
+          const data = await res.json();
+          img.src = data.thumbnail_url;
+          return;
+        } catch {}
+      }
+      img.src = `https://img.youtube.com/vi/${card.dataset.video}/hqdefault.jpg`;
+    });
+
+    const players = {};
+    let playAllActive = false;
+
+    function getCards() {
+      return [...document.querySelectorAll('.fan-rack .song-card')];
+    }
+
+    function pauseAll() {
+      Object.entries(players).forEach(([id, p]) => {
+        p.pauseVideo();
+        const btn = document.querySelector(`[data-video="${id}"] .play-btn`);
+        if (btn) btn.classList.remove('playing');
+      });
+    }
+
+    function playCard(card) {
+      pauseAll();
+      const vid = card.dataset.video;
+      if (players[vid]) {
+        players[vid].playVideo();
+        const btn = card.querySelector('.play-btn');
+        if (btn) btn.classList.add('playing');
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      document.querySelectorAll('.song-card[data-video]').forEach(card => {
+        const vid = card.dataset.video;
+        players[vid] = new YT.Player(`yt-${vid}`, {
+          videoId: vid,
+          playerVars: { controls: 0, disablekb: 1, modestbranding: 1 },
+          events: {
+            onStateChange(e) {
+              card.querySelector('.play-btn').classList.toggle('playing', e.data === 1);
+
+              // advance to next card when song ends
+              if (e.data === 0 && playAllActive) {
+                const cards = getCards();
+                const idx = cards.indexOf(card);
+                if (idx < cards.length - 1) {
+                  playCard(cards[idx + 1]);
+                } else {
+                  playAllActive = false;
+                  document.getElementById('play-all-btn').classList.remove('active');
+                }
+              }
+            }
+          }
+        });
+      });
+    };
+
+    const ytScript = document.createElement('script');
+    ytScript.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(ytScript);
+
+    // individual play/pause
+    document.querySelectorAll('.play-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.song-card');
+        const vid = card.dataset.video;
+        const player = players[vid];
+        if (!player) return;
+
+        const isPlaying = player.getPlayerState() === 1;
+        pauseAll();
+        if (!isPlaying) {
+          player.playVideo();
+          btn.classList.add('playing');
+        }
+
+        // if user manually controls, exit play-all mode
+        playAllActive = false;
+        document.getElementById('play-all-btn').classList.remove('active');
+      });
+    });
+
+    // play all
+    document.getElementById('play-all-btn').addEventListener('click', () => {
+      playAllActive = !playAllActive;
+      document.getElementById('play-all-btn').classList.toggle('active', playAllActive);
+
+      if (playAllActive) {
+        playCard(getCards()[0]);
+      } else {
+        pauseAll();
+      }
+    });
+
+    // shuffle
+    document.getElementById('shuffle-btn').addEventListener('click', () => {
+      const rack = document.querySelector('.fan-rack');
+      const cards = getCards();
+      for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        rack.appendChild(cards[j]);
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+      }
+      // flash the button
+      const btn = document.getElementById('shuffle-btn');
+      btn.classList.add('active');
+      setTimeout(() => btn.classList.remove('active'), 600);
+    });
+  </script>
+  <script src="nav.js"></script>
+  <script src="scene.js"></script>
+  <script src="particles.js"></script>
+  <script src="effects.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alex Li</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <canvas id="sphere-canvas"></canvas>
+        <div class="identity">
+          <svg class="name-svg" viewBox="0 0 195 54" xmlns="http://www.w3.org/2000/svg" aria-label="Alex Li" role="img">
+              <text x="3" y="43" class="name-text">Alex Li</text>
+            </svg>
+          <p class="tagline">Software Engineer</p>
+        </div>
+      </div>
+      <nav>
+        <a href="index.html" class="active">About</a>
+        <a href="photography.html">Photography</a>
+        <a href="hobbies.html">Hobbies</a>
+        <button id="theme-toggle" aria-label="Toggle dark mode">☾</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div class="intro-text">
+        <p>
+          hi! i'm alex, and i'm a cs major @ purdue university. when i'm not coding,
+          you'll probably find me hooping or spending time outdoors. <br><br> thanks for taking the time to
+          check out my page, i'll be updating it from (hopefully) time to time,
+          documenting my work and other hobbies!
+
+          i'm always open for a chat and hearing about new opportunities. feel free to reach out :)
+        </p>
+      </div>
+      <div class="avatar">
+        <img src="headshot.png" alt="headshot" />
+        <!-- Replace with: <img src="photo.jpg" alt="Alex Li" /> -->
+      </div>
+    </section>
+
+    <section>
+      <h2>Experience</h2>
+      <ul class="entries">
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">Incoming SWE Intern @ Databricks</span>
+            <span class="entry-date">Summer 2026</span>
+          </div>
+          <p class="entry-sub">Query Optimization · Autobricks</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">SDE Intern @ Amazon Web Services</span>
+            <span class="entry-date">May 2025 - Aug 2025</span>
+          </div>
+          <p class="entry-sub">Storage + Query Optimization · AWS Redshift</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Research</h2>
+      <ul class="entries">
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">Serverless Computing @ UPenn</span>
+            <span class="entry-date">Aug 2025 - Present</span>
+          </div>
+          <p class="entry-sub">wip!</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">Regularization & Web Scraping @ Purdue CS</span>
+            <span class="entry-date">Jan 2025 - Aug 2025</span>
+          </div>
+          <p class="entry-sub">Wrote scripts & researched new regularization techniques!</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Projects</h2>
+      <ul class="entries">
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">Spectra</span>
+            <a class="entry-link" href="https://github.com/Alexlihing/Spectra" target="_blank">GitHub</a>
+          </div>
+          <p class="entry-sub">Video pipeline for detecting danger in real time</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">Functionary</span>
+            <a class="entry-link" href="https://github.com/Alexlihing/functionary" target="_blank">GitHub</a>
+          </div>
+          <p class="entry-sub">A tool to help developers visualize complex codebases</p>
+        </li>
+        <li>
+          <div class="entry-header">
+            <span class="entry-title">Veritas</span>
+            <a class="entry-link" href="https://github.com/karthikcsq/veritas" target="_blank">GitHub</a>
+          </div>
+          <p class="entry-sub">A platform ensuring open source research integrity</p>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <a href="mailto:alexli9132@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      <a href="https://github.com/AlexLi9132" target="_blank" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+      <a href="https://www.linkedin.com/in/alex-li1/" target="_blank" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="https://drive.google.com/file/d/1liJx27_zMX0FxkSdrukWomMvsUMcoVbl/view?usp=sharing" target="_blank" aria-label="Resume">📄</a>
+    </p>
+  </footer>
+
+  <script src="nav.js"></script>
+  <script src="scene.js"></script>
+  <script src="particles.js"></script>
+  <script src="effects.js"></script>
+</body>
+</html>

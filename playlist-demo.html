@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Playlist Demo · Alex Li</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    .demo-section { margin: 3rem 0; }
+    .demo-label {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── 1: Playlist Sleeve ── */
+    .sleeve {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #111;
+      border: 1px solid #252525;
+      border-radius: 14px;
+      padding: 1.25rem;
+    }
+    .sleeve-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #666;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── 2: Fanned Cards ── */
+    .fan-rack {
+      position: relative;
+      width: 310px;
+      height: 290px;
+    }
+    .fan-rack .song-card {
+      position: absolute;
+      top: 0;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .fan-rack .song-card:nth-child(1) {
+      left: 0;
+      transform: rotate(-6deg);
+      transform-origin: bottom center;
+      z-index: 1;
+    }
+    .fan-rack .song-card:nth-child(2) {
+      left: 75px;
+      transform: rotate(4deg);
+      transform-origin: bottom center;
+      z-index: 2;
+    }
+    .fan-rack .song-card:hover {
+      transform: rotate(0deg) translateY(-14px) !important;
+      z-index: 10;
+      box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+    }
+
+    /* ── 3: Streaming Shelf ── */
+    .shelf {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #0f0f0f;
+      border: 1px solid #1e1e1e;
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+    }
+    .shelf-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .shelf-pill {
+      background: #1DB954;
+      color: #fff;
+      font-size: 0.58rem;
+      font-family: var(--font-mono);
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0.65rem;
+      border-radius: 100px;
+      text-transform: uppercase;
+    }
+    .shelf-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #ddd;
+    }
+
+    /* ── 4: Polaroid Wall ── */
+    .polaroid-wall {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+    .polaroid-wall .song-card {
+      background: #faf9f6 !important;
+      border: none !important;
+      border-radius: 2px !important;
+      padding: 0.5rem 0.5rem 2.75rem !important;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1) !important;
+      width: 175px !important;
+      transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+    }
+    .polaroid-wall .song-card:nth-child(1) { transform: rotate(-3.5deg); }
+    .polaroid-wall .song-card:nth-child(2) { transform: rotate(2.5deg); margin-top: 18px; }
+    .polaroid-wall .song-card:hover {
+      transform: rotate(0deg) translateY(-10px) !important;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.22) !important;
+    }
+    .polaroid-wall .song-art { border-radius: 0 !important; }
+    .polaroid-wall .song-info { padding: 0.6rem 0.25rem 0 !important; }
+    .polaroid-wall .song-name {
+      font-size: 0.78rem !important;
+      color: #1a1a1a !important;
+      font-family: var(--font-mono) !important;
+    }
+    .polaroid-wall .song-artist { color: #888 !important; }
+    .polaroid-wall .art-overlay { border-radius: 0 !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <canvas id="sphere-canvas"></canvas>
+        <div class="identity">
+          <svg class="name-svg" viewBox="0 0 195 54" xmlns="http://www.w3.org/2000/svg" aria-label="Alex Li" role="img">
+            <text x="3" y="43" class="name-text">Alex Li</text>
+          </svg>
+          <p class="tagline">Software Engineer</p>
+        </div>
+      </div>
+      <nav>
+        <a href="index.html">About</a>
+        <a href="photography.html">Photography</a>
+        <a href="hobbies.html">Hobbies</a>
+        <button id="theme-toggle" aria-label="Toggle dark mode">☾</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p>four playlist styles — pick your fave and i'll swap it in.</p>
+    </section>
+
+    <!-- ① Playlist Sleeve -->
+    <section class="demo-section">
+      <p class="demo-label">① playlist sleeve</p>
+      <div class="sleeve">
+        <div class="sleeve-header">♫ &nbsp;on repeat</div>
+        <div class="song-rack">
+          <div class="song-card" data-track="1z5ebC9238uGoBgzYyvGpQ" data-video="eA0lHNZ1KCA" data-player="p1">
+            <div class="song-art">
+              <img class="art-img" alt="Toxic Till the End" />
+              <div class="art-overlay">
+                <button class="play-btn" aria-label="Play">
+                  <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="song-info">
+              <p class="song-name">Toxic Till the End</p>
+              <p class="song-artist">ROSÉ</p>
+            </div>
+            <div class="yt-hidden"><div id="p1"></div></div>
+          </div>
+          <div class="song-card" data-track="4RXsi1oTj3uaqoRC9UrwGA" data-video="NhmzKgaoLX0" data-player="p2">
+            <div class="song-art">
+              <img class="art-img" alt="I Got You" />
+              <div class="art-overlay">
+                <button class="play-btn" aria-label="Play">
+                  <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="song-info">
+              <p class="song-name">I Got You</p>
+              <p class="song-artist">TWICE</p>
+            </div>
+            <div class="yt-hidden"><div id="p2"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ② Fanned Cards -->
+    <section class="demo-section">
+      <p class="demo-label">② fanned cards</p>
+      <div class="fan-rack">
+        <div class="song-card" data-track="1z5ebC9238uGoBgzYyvGpQ" data-video="eA0lHNZ1KCA" data-player="p3">
+          <div class="song-art">
+            <img class="art-img" alt="Toxic Till the End" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">Toxic Till the End</p>
+            <p class="song-artist">ROSÉ</p>
+          </div>
+          <div class="yt-hidden"><div id="p3"></div></div>
+        </div>
+        <div class="song-card" data-track="4RXsi1oTj3uaqoRC9UrwGA" data-video="NhmzKgaoLX0" data-player="p4">
+          <div class="song-art">
+            <img class="art-img" alt="I Got You" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">I Got You</p>
+            <p class="song-artist">TWICE</p>
+          </div>
+          <div class="yt-hidden"><div id="p4"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ Streaming Shelf -->
+    <section class="demo-section">
+      <p class="demo-label">③ streaming shelf</p>
+      <div class="shelf">
+        <div class="shelf-header">
+          <span class="shelf-pill">▶ now playing</span>
+          <span class="shelf-title">lately listening to</span>
+        </div>
+        <div class="song-rack">
+          <div class="song-card" data-track="1z5ebC9238uGoBgzYyvGpQ" data-video="eA0lHNZ1KCA" data-player="p5">
+            <div class="song-art">
+              <img class="art-img" alt="Toxic Till the End" />
+              <div class="art-overlay">
+                <button class="play-btn" aria-label="Play">
+                  <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="song-info">
+              <p class="song-name">Toxic Till the End</p>
+              <p class="song-artist">ROSÉ</p>
+            </div>
+            <div class="yt-hidden"><div id="p5"></div></div>
+          </div>
+          <div class="song-card" data-track="4RXsi1oTj3uaqoRC9UrwGA" data-video="NhmzKgaoLX0" data-player="p6">
+            <div class="song-art">
+              <img class="art-img" alt="I Got You" />
+              <div class="art-overlay">
+                <button class="play-btn" aria-label="Play">
+                  <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="song-info">
+              <p class="song-name">I Got You</p>
+              <p class="song-artist">TWICE</p>
+            </div>
+            <div class="yt-hidden"><div id="p6"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ Polaroid Wall -->
+    <section class="demo-section">
+      <p class="demo-label">④ polaroid wall</p>
+      <div class="polaroid-wall">
+        <div class="song-card" data-track="1z5ebC9238uGoBgzYyvGpQ" data-video="eA0lHNZ1KCA" data-player="p7">
+          <div class="song-art">
+            <img class="art-img" alt="Toxic Till the End" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">Toxic Till the End</p>
+            <p class="song-artist">ROSÉ</p>
+          </div>
+          <div class="yt-hidden"><div id="p7"></div></div>
+        </div>
+        <div class="song-card" data-track="4RXsi1oTj3uaqoRC9UrwGA" data-video="NhmzKgaoLX0" data-player="p8">
+          <div class="song-art">
+            <img class="art-img" alt="I Got You" />
+            <div class="art-overlay">
+              <button class="play-btn" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="song-info">
+            <p class="song-name">I Got You</p>
+            <p class="song-artist">TWICE</p>
+          </div>
+          <div class="yt-hidden"><div id="p8"></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <a href="mailto:alexli9132@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      <a href="https://github.com/AlexLi9132" target="_blank" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+      <a href="https://www.linkedin.com/in/alex-li1/" target="_blank" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="https://drive.google.com/file/d/1liJx27_zMX0FxkSdrukWomMvsUMcoVbl/view?usp=sharing" target="_blank" aria-label="Resume">📄</a>
+    </p>
+  </footer>
+
+  <script>
+    // Album art via Spotify oEmbed
+    document.querySelectorAll('.song-card[data-track]').forEach(async card => {
+      try {
+        const res = await fetch(`https://open.spotify.com/oembed?url=https://open.spotify.com/track/${card.dataset.track}`);
+        const data = await res.json();
+        card.querySelectorAll('.art-img').forEach(img => img.src = data.thumbnail_url);
+      } catch {}
+    });
+
+    // YouTube IFrame API — callback defined before script injection
+    const players = {};
+
+    window.onYouTubeIframeAPIReady = function () {
+      document.querySelectorAll('.song-card[data-player]').forEach(card => {
+        const pid = card.dataset.player;
+        const vid = card.dataset.video;
+        players[pid] = new YT.Player(pid, {
+          videoId: vid,
+          playerVars: { controls: 0, disablekb: 1, modestbranding: 1 },
+          events: {
+            onStateChange(e) {
+              card.querySelector('.play-btn').classList.toggle('playing', e.data === 1);
+            }
+          }
+        });
+      });
+    };
+
+    const ytScript = document.createElement('script');
+    ytScript.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(ytScript);
+
+    document.querySelectorAll('.play-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.song-card');
+        const pid = card.dataset.player;
+        const player = players[pid];
+        if (!player) return;
+
+        const isPlaying = player.getPlayerState() === 1;
+
+        Object.entries(players).forEach(([id, p]) => {
+          if (id !== pid) {
+            p.pauseVideo();
+            document.querySelector(`[data-player="${id}"] .play-btn`).classList.remove('playing');
+          }
+        });
+
+        isPlaying ? player.pauseVideo() : player.playVideo();
+      });
+    });
+  </script>
+  <script src="nav.js"></script>
+  <script src="scene.js"></script>
+  <script src="particles.js"></script>
+  <script src="effects.js"></script>
+</body>
+</html>

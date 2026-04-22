@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Photography · Alex Li</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <canvas id="sphere-canvas"></canvas>
+        <div class="identity">
+          <svg class="name-svg" viewBox="0 0 195 54" xmlns="http://www.w3.org/2000/svg" aria-label="Alex Li" role="img">
+              <text x="3" y="43" class="name-text">Alex Li</text>
+            </svg>
+          <p class="tagline">Software Engineer</p>
+        </div>
+      </div>
+      <nav>
+        <a href="index.html">About</a>
+        <a href="photography.html" class="active">Photography</a>
+        <a href="hobbies.html">Hobbies</a>
+        <button id="theme-toggle" aria-label="Toggle dark mode">☾</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p>
+        i'm just a beginner, but i've always wanted to get 
+        into photography. here's some flicks from my phone i think are pretty cool :)<br><br>
+        i've finally got a real camera. more photos to come soon!
+      </p>
+    </section>
+
+    <section>
+      <div class="photo-grid">
+        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
+          <img src="chicago.jpeg" alt="Chicago" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
+          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Chicago Riverwalk · iPhone 15</p>
+        </div>
+        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
+          <img src="turkey_run.png" alt="Turkey Run" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
+          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Turkey Run State Park· iPhone 15</p>
+        </div>
+        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
+          <img src="bryce_sunrise.jpeg" alt="Bryce Canyon Sunrise" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
+          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Bryce Canyon Sunrise · iPhone 17</p>
+        </div>
+        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
+          <img src="bryce_stars.jpeg" alt="Bryce Canyon Stars" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
+          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Bryce Canyon Stars · iPhone 17</p>
+        </div>
+        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
+          <img src="skogafoss.jpeg" alt="Skogafoss" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
+          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Skogafoss (Iceland) · iPhone 15</p>
+        </div>
+        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
+          <img src="northern_lights.jpeg" alt="Northern Lights" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
+          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Northern Lights · iPhone 15</p>
+        </div>
+        <div class="photo-placeholder">
+          <span>coming soon</span>
+        </div>
+        <div class="photo-placeholder">
+          <span>coming soon</span>
+        </div>
+        <div class="photo-placeholder">
+          <span>coming soon</span>
+        </div>
+        <div class="photo-placeholder">
+          <span>coming soon</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <a href="mailto:alexli9132@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      <a href="https://github.com/AlexLi9132" target="_blank" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+      <a href="https://www.linkedin.com/in/alex-li1/" target="_blank" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="https://drive.google.com/file/d/1liJx27_zMX0FxkSdrukWomMvsUMcoVbl/view?usp=sharing" target="_blank" aria-label="Resume">📄</a>
+    </p>
+  </footer>
+
+  <script src="nav.js"></script>
+  <script src="scene.js"></script>
+  <script src="particles.js"></script>
+  <script src="effects.js"></script>
+</body>
+</html>
