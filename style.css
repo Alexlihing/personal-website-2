@@ -193,7 +193,7 @@ h2 {
 
 .entry-title {
   font-size: 0.95rem;
-  font-weight: normal;
+  font-weight: 500;
 }
 
 .entry-date {
@@ -219,6 +219,28 @@ h2 {
   font-size: 0.85rem;
   color: var(--muted);
   margin-top: 0.15rem;
+}
+
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.entry-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: #aaa;
+  background: var(--border);
+  border-radius: 3px;
+  padding: 0.1rem 0.45rem;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="dark"] .entry-tag {
+  color: #4a6a88;
+  background: #162840;
 }
 
 .hobbies-list .entry-title {

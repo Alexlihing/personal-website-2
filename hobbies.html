@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hobbies · Alex Li</title>
-  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="style.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
 <body>
@@ -59,21 +59,15 @@
         </li>
         <li>
           <div class="entry-header">
-            <span class="entry-title">cooking</span>
-          </div>
-          <p class="entry-sub">making my own food in the summer :)</p>
-        </li>
-        <li>
-          <div class="entry-header">
             <span class="entry-title">climbing</span>
           </div>
-          <p class="entry-sub">catch me @ movement if you can!</p>
+          <p class="entry-sub">catch me @ movement :p</p>
         </li>
       </ul>
     </section>
 
     <section>
-      <h2 style="text-transform: none;">here's some of my fav songs lately :)</h2>
+      <h2 style="text-transform: none;">here's some of my fav songs lately!</h2>
       <div class="fan-controls">
         <button class="fan-btn" id="play-all-btn">
           <i class="fa-solid fa-play"></i>
@@ -235,12 +229,14 @@
 
     const players = {};
     let playAllActive = false;
+    let activeVideoId = null;
 
     function getCards() {
       return [...document.querySelectorAll('.fan-rack .song-card')];
     }
 
     function pauseAll() {
+      activeVideoId = null;
       Object.entries(players).forEach(([id, p]) => {
         p.pauseVideo();
         const btn = document.querySelector(`[data-video="${id}"] .play-btn`);
@@ -252,11 +248,20 @@
       pauseAll();
       const vid = card.dataset.video;
       if (players[vid]) {
+        activeVideoId = vid;
         players[vid].playVideo();
         const btn = card.querySelector('.play-btn');
         if (btn) btn.classList.add('playing');
       }
     }
+
+    // Resume playback if the browser paused us when switching tabs
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && activeVideoId && players[activeVideoId]) {
+        const state = players[activeVideoId].getPlayerState();
+        if (state === 2 || state === 5) players[activeVideoId].playVideo();
+      }
+    });
 
     window.onYouTubeIframeAPIReady = function () {
       document.querySelectorAll('.song-card[data-video]').forEach(card => {
@@ -266,7 +271,8 @@
           playerVars: { controls: 0, disablekb: 1, modestbranding: 1 },
           events: {
             onStateChange(e) {
-              card.querySelector('.play-btn').classList.toggle('playing', e.data === 1);
+              if (e.data === 1) card.querySelector('.play-btn').classList.add('playing');
+              else if (e.data === 0 || e.data === 2) card.querySelector('.play-btn').classList.remove('playing');
 
               // advance to next card when song ends
               if (e.data === 0 && playAllActive) {
@@ -276,6 +282,7 @@
                   playCard(cards[idx + 1]);
                 } else {
                   playAllActive = false;
+                  activeVideoId = null;
                   document.getElementById('play-all-btn').classList.remove('active');
                 }
               }
@@ -300,6 +307,7 @@
         const isPlaying = player.getPlayerState() === 1;
         pauseAll();
         if (!isPlaying) {
+          activeVideoId = vid;
           player.playVideo();
           btn.classList.add('playing');
         }
