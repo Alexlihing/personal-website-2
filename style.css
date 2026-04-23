@@ -425,6 +425,61 @@ h2 {
   margin: 0;
 }
 
+/* ── Waveform ── */
+.waveform {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.waveform span {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.92);
+  transform-origin: bottom;
+  animation: waveBar 0.9s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+.waveform span:nth-child(1) { height: 8px;  animation-delay: 0s; }
+.waveform span:nth-child(2) { height: 13px; animation-delay: 0.15s; }
+.waveform span:nth-child(3) { height: 20px; animation-delay: 0.3s; }
+.waveform span:nth-child(4) { height: 13px; animation-delay: 0.15s; }
+.waveform span:nth-child(5) { height: 8px;  animation-delay: 0s; }
+
+@keyframes waveBar {
+  0%, 100% { transform: scaleY(0.25); }
+  50%       { transform: scaleY(1); }
+}
+
+.song-art:has(.play-btn.playing) .waveform {
+  opacity: 1;
+}
+
+.song-art:has(.play-btn.playing) .waveform span {
+  animation-play-state: running;
+}
+
+@keyframes cardGlow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(29,185,84,0.1), 0 4px 12px rgba(29,185,84,0.05); }
+  50%       { box-shadow: 0 0 0 1.5px rgba(29,185,84,0.35), 0 4px 18px rgba(29,185,84,0.12); }
+}
+
+.fan-rack .song-card:has(.play-btn.playing) {
+  animation: cardGlow 0.9s ease-in-out infinite;
+  z-index: 10;
+}
+
 .yt-hidden {
   position: fixed;
   left: -9999px;

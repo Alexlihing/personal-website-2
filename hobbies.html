@@ -227,6 +227,14 @@
       img.src = `https://img.youtube.com/vi/${card.dataset.video}/hqdefault.jpg`;
     });
 
+    // Inject waveform bars into each album art
+    document.querySelectorAll('.song-art').forEach(art => {
+      const wf = document.createElement('div');
+      wf.className = 'waveform';
+      wf.innerHTML = '<span></span><span></span><span></span><span></span><span></span>';
+      art.appendChild(wf);
+    });
+
     const players = {};
     let playAllActive = false;
     let activeVideoId = null;
