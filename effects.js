@@ -149,7 +149,7 @@
     setTimeout(() => {
       svg.style.clipPath = 'none';
       svg.style.animation = 'name-breathe 5s ease-in-out infinite';
-    }, 2150);
+    }, 2120);
   })();
 
   // ── 6. Typewriter for tagline ─────────────────────────────────────────────

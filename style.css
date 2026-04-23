@@ -546,6 +546,12 @@ footer a:hover {
   transform: translateY(-3px);
 }
 
+footer a[aria-label="Email"]:hover    { color: #e04040; }
+footer a[aria-label="GitHub"]:hover   { color: #24292f; }
+footer a[aria-label="LinkedIn"]:hover { color: #0077b5; }
+
+[data-theme="dark"] footer a[aria-label="GitHub"]:hover { color: #f0f0f0; }
+
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .header-inner {
@@ -584,6 +590,19 @@ footer a:hover {
 @keyframes name-breathe {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.78; }
+}
+
+/* ── Grain texture ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
 }
 
 /* ── Vignette ── */
@@ -631,6 +650,21 @@ body::before {
   --accent: #7bb5e0;
   --border: #1e3450;
 }
+/* ── Avatar entrance ── */
+@keyframes avatarIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.avatar {
+  animation: avatarIn 0.55s ease 0.15s both;
+}
+
+/* ── Dark mode overrides ── */
+[data-theme="dark"] .intro-text p {
+  color: #ffffff;
+}
+
 [data-theme="dark"] .avatar {
   background: #1a2e48;
 }

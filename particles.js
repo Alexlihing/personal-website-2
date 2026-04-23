@@ -76,7 +76,7 @@
       blossomPetal(size);
       ctx.fillStyle = 'rgba(255,183,197,0.93)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(220,140,160,0.3)';
+      ctx.strokeStyle = 'rgba(150,140,160,0.3)';
       ctx.lineWidth = 0.5;
       ctx.stroke();
       ctx.restore();
