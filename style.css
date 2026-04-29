@@ -221,6 +221,15 @@ h2 {
   margin-top: 0.15rem;
 }
 
+.entry-award {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--muted);
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+}
+
 .entry-tags {
   display: flex;
   flex-wrap: wrap;
