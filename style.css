@@ -503,6 +503,11 @@ h2 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
+  /* Break out of the 680px column so three tiles stay roughly the old size */
+  width: min(1000px, calc(100vw - 3rem));
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .photo-placeholder {
