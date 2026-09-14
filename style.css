@@ -504,7 +504,7 @@ h2 {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
   /* Break out of the 680px column so three tiles stay roughly the old size */
-  width: min(1180px, calc(100vw - 3rem));
+  width: min(1450px, calc(100vw - 3rem));
   position: relative;
   left: 50%;
   transform: translateX(-50%);
