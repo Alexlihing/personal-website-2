@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Photography · Alex Li</title>
   <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="book.css?v=1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
 <body>
@@ -37,89 +38,21 @@
       </p>
     </section>
 
-    <section>
-      <div class="photo-grid">
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="big-sur.jpg" alt="Big Sur" style="width:100%; height:100%; object-fit:cover; object-position:center bottom; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Big Sur · Sony α6700</p>
+    <section class="book-section">
+      <div class="book-viewport">
+        <div class="book-enter">
+          <div class="book-scene" id="book-scene">
+            <div class="book-shift" data-state="closed-front">
+              <div class="book" id="book"></div>
+            </div>
+          </div>
         </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="tenryu-ji-temple.jpg" alt="Tenryu-ji Temple" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Tenryū-ji Temple · Sony α6700</p>
+        <div class="book-controls">
+          <button id="book-prev" class="book-btn" aria-label="Previous page">&larr;</button>
+          <span id="book-counter">cover</span>
+          <button id="book-next" class="book-btn" aria-label="Next page">&rarr;</button>
         </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="kamakura-still-life.jpg" alt="Kamakura" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Kamakura · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="sleeping-monkey.jpg" alt="Arashiyama" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Arashiyama · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="tokyo-tower.jpg" alt="Tokyo Tower" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Tokyo Tower · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="yasaka-pagoda.jpg" alt="Yasaka Pagoda" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Yasaka Pagoda · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="shibuya-crossing.jpg" alt="Shibuya Crossing" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Shibuya Crossing · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="yosemite-1.jpg" alt="Yosemite" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Yosemite National Park · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="arashiyama-crying-statue.jpg" alt="Arashiyama" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Arashiyama · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="dotonbori.jpg" alt="Dotonbori" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Dōtonbori · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="kamakura-view.jpg" alt="Kamakura" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Kamakura · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="azabu-juban-noryo-festival.jpg" alt="Azabu-Juban Noryo Festival" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Azabu-Jūban Noryo Festival · Sony α6700</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="chicago.jpeg" alt="Chicago" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Chicago Riverwalk · iPhone 15</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="turkey_run.png" alt="Turkey Run" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Turkey Run State Park · iPhone 15</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="bryce_sunrise.jpeg" alt="Bryce Canyon Sunrise" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Bryce Canyon Sunrise · iPhone 17</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="bryce_stars.jpeg" alt="Bryce Canyon Stars" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Bryce Canyon Stars · iPhone 17</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="skogafoss.jpeg" alt="Skogafoss" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Skógafoss (Iceland) · iPhone 15</p>
-        </div>
-        <div class="photo-placeholder" style="padding:0; overflow:hidden; position:relative;">
-          <img src="northern_lights.jpeg" alt="Northern Lights" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">
-          <p class="photo-caption" style="position:absolute; bottom:0.5rem; left:0; right:0; text-align:center; margin:0;">Northern Lights · iPhone 15</p>
-        </div>
-        <div class="photo-placeholder">
-          <span>coming soon</span>
-        </div>
-        <div class="photo-placeholder">
-          <span>coming soon</span>
-        </div>
-        <div class="photo-placeholder">
-          <span>coming soon</span>
-        </div>
+        <p class="book-hint">click a page to turn it, or drag it by the edge &middot; &larr; &rarr;</p>
       </div>
     </section>
   </main>
@@ -137,5 +70,29 @@
   <script src="scene.js"></script>
   <script src="particles.js"></script>
   <script src="effects.js"></script>
+  <script>
+    // Photos in book order, one per page. Edit this list to add, remove, or reorder.
+    window.BOOK_PHOTOS = [
+    { src: 'big-sur.jpg', alt: 'Big Sur', caption: 'Big Sur · Sony α6700' },
+    { src: 'tenryu-ji-temple.jpg', alt: 'Tenryu-ji Temple', caption: 'Tenryū-ji Temple · Sony α6700' },
+    { src: 'kamakura-still-life.jpg', alt: 'Kamakura', caption: 'Kamakura · Sony α6700' },
+    { src: 'sleeping-monkey.jpg', alt: 'Arashiyama', caption: 'Arashiyama · Sony α6700' },
+    { src: 'tokyo-tower.jpg', alt: 'Tokyo Tower', caption: 'Tokyo Tower · Sony α6700' },
+    { src: 'yasaka-pagoda.jpg', alt: 'Yasaka Pagoda', caption: 'Yasaka Pagoda · Sony α6700' },
+    { src: 'shibuya-crossing.jpg', alt: 'Shibuya Crossing', caption: 'Shibuya Crossing · Sony α6700' },
+    { src: 'yosemite-1.jpg', alt: 'Yosemite', caption: 'Yosemite National Park · Sony α6700' },
+    { src: 'arashiyama-crying-statue.jpg', alt: 'Arashiyama', caption: 'Arashiyama · Sony α6700' },
+    { src: 'dotonbori.jpg', alt: 'Dotonbori', caption: 'Dōtonbori · Sony α6700' },
+    { src: 'kamakura-view.jpg', alt: 'Kamakura', caption: 'Kamakura · Sony α6700' },
+    { src: 'azabu-juban-noryo-festival.jpg', alt: 'Azabu-Juban Noryo Festival', caption: 'Azabu-Jūban Noryo Festival · Sony α6700' },
+    { src: 'chicago.jpeg', alt: 'Chicago', caption: 'Chicago Riverwalk · iPhone 15' },
+    { src: 'turkey_run.png', alt: 'Turkey Run', caption: 'Turkey Run State Park · iPhone 15' },
+    { src: 'bryce_sunrise.jpeg', alt: 'Bryce Canyon Sunrise', caption: 'Bryce Canyon Sunrise · iPhone 17' },
+    { src: 'bryce_stars.jpeg', alt: 'Bryce Canyon Stars', caption: 'Bryce Canyon Stars · iPhone 17' },
+    { src: 'skogafoss.jpeg', alt: 'Skogafoss', caption: 'Skógafoss (Iceland) · iPhone 15' },
+    { src: 'northern_lights.jpeg', alt: 'Northern Lights', caption: 'Northern Lights · iPhone 15' }
+    ];
+  </script>
+  <script src="book.js?v=1"></script>
 </body>
 </html>
