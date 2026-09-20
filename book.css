@@ -154,19 +154,19 @@
 
 .plate {
   position: absolute;
-  inset: 8% 9% 12%;
+  inset: 4.5% 4.5% 8.5%;
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--pw) * .03);
+  gap: calc(var(--pw) * .022);
 }
 .plate img {
   display: block;
   width: auto; height: auto;
   max-width: 100%;
-  max-height: calc(100% - var(--pw) * .075);
+  max-height: calc(100% - var(--pw) * .06);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .22), 0 8px 22px -10px rgba(0, 0, 0, .45);
   opacity: 0;
   transition: opacity .6s ease;
@@ -339,18 +339,19 @@
 }
 .book-btn {
   background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  width: 2rem; height: 2rem;
+  border: 1px solid var(--muted);
+  color: var(--text);
+  opacity: .8;
+  width: 2.4rem; height: 2.4rem;
   border-radius: 50%;
   cursor: pointer;
-  font-size: .95rem;
+  font-size: 1.1rem;
   line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
   transition: color .15s, border-color .15s, transform .15s;
 }
-.book-btn:hover { color: var(--text); border-color: var(--muted); transform: translateY(-1px); }
-.book-btn:disabled { opacity: .3; cursor: default; transform: none; }
+.book-btn:hover { opacity: 1; border-color: var(--text); transform: translateY(-1px); }
+.book-btn:disabled { opacity: .25; cursor: default; transform: none; }
 #book-counter { min-width: 7ch; text-align: center; letter-spacing: .06em; }
 .book-hint {
   text-align: center;
