@@ -32,6 +32,12 @@
     logOpen: window.innerWidth > 900,
     ws: null,
     retry: 0,
+    prevUp: {},           // face-up card keys at the last render, for flip animations
+    dealAnim: false,      // animate the deal on the next render
+    lastDrawKey: '',
+    lastTopId: '',
+    lastTurnMine: false,
+    banner: '',
   };
   store.set('cabo.token', S.token);
 
@@ -117,7 +123,15 @@
     S.game = msg.game;
     S.screen = S.game ? 'game' : 'lobby';
     if (!S.game || (prevGame && prevGame.status === 'peek' && S.game.status !== 'peek')) clearReveals();
+    if (S.game && (!prevGame || prevGame.status === 'finished') && S.game.status === 'peek') {
+      S.dealAnim = true;
+      S.prevUp = {};
+      S.lastDrawKey = ''; S.lastTopId = ''; S.lastTurnMine = false;
+    }
     if (S.game) {
+      var mineNow = S.game.status === 'playing' && S.game.turnPlayerId === S.me && S.game.phase === 'draw';
+      S.banner = (mineNow && !S.lastTurnMine) ? 'Your turn' : '';
+      S.lastTurnMine = mineNow;
       var myTurn = S.game.turnPlayerId === S.me;
       if (!(myTurn && S.game.phase === 'power')) S.sel = { mine: null, theirs: null };
       if (S.game.status === 'finished') clearReveals();
@@ -183,16 +197,21 @@
   function isHost() { return S.lobby && S.lobby.hostId === S.me; }
   function cardLabel(card) { return card.rank + SUIT_CHAR[card.suit]; }
 
-  function cardFaceHTML(card, extraCls, attrs) {
-    var red = card.suit === 'H' || card.suit === 'D';
-    return '<button type="button" class="card ' + (red ? 'red ' : '') + (extraCls || '') + '" ' + (attrs || '') + '>' +
-      '<span class="face"><span class="rank">' + card.rank + '</span><span class="suit">' + SUIT_CHAR[card.suit] + '</span></span>' +
-      '<span class="val">' + card.value + '</span></button>';
-  }
-
-  function cardBackHTML(extraCls, attrs, seenMark) {
-    return '<button type="button" class="card down ' + (extraCls || '') + '" ' + (attrs || '') + '>' +
-      '<span class="face">' + (seenMark ? '<span class="seen">seen</span>' : '') + '</span></button>';
+  // A two-sided card. Face-up cards show `card`; face-down ones may carry a "seen" mark.
+  function cardEl(o) {
+    var card = o.card || null;
+    var red = card && (card.suit === 'H' || card.suit === 'D');
+    var cls = 'card ' + (o.up ? 'up ' : '') + (red ? 'red ' : '') + (o.cls || '');
+    var front = '';
+    if (card) {
+      var sym = SUIT_CHAR[card.suit];
+      front = '<span class="face"><span class="idx">' + card.rank + '<small>' + sym + '</small></span>' +
+        '<span class="big">' + sym + '</span>' +
+        '<span class="val">' + card.value + '</span></span>';
+    }
+    return '<button type="button" class="' + cls + '" ' + (o.attrs || '') + (o.style ? ' style="' + o.style + '"' : '') + '>' +
+      '<span class="inner"><span class="side back"><span class="face">' + (o.seen ? '<span class="seen">seen</span>' : '') + '</span></span>' +
+      '<span class="side front">' + front + '</span></span></button>';
   }
 
   // Which single-click action a given card currently has for me, if any.
@@ -221,7 +240,8 @@
     return g && g.status === 'playing' && g.phase === 'settle' && !g.pendingGive;
   }
 
-  function cardHTML(ownerId, card) {
+  var nowUp = {};
+  function cardHTML(ownerId, card, index) {
     var key = ownerId + ':' + card.id;
     var action = cardAction(ownerId, card);
     var cls = '';
@@ -231,11 +251,12 @@
     if (action) attrs += ' data-action="' + action + '"';
     if (canMatch()) cls += ' matchable';
     if (S.sel.mine === card.id || (S.sel.theirs && S.sel.theirs.cardId === card.id)) cls += ' selected';
+    var style = '';
+    if (S.dealAnim) { cls += ' deal'; style = '--delay:' + (index * 70) + 'ms'; }
 
-    var reveal = S.reveals[key];
-    if (reveal) return cardFaceHTML(reveal, cls + ' revealed', attrs);
-    if (card.known) return cardFaceHTML(card.known, cls + ' known', attrs);
-    return cardBackHTML(cls, attrs, card.seenByMe);
+    var face = S.reveals[key] || card.known || null;
+    if (face) { nowUp[key] = true; cls += S.reveals[key] ? ' revealed' : ' known'; }
+    return cardEl({ up: !!face, card: face, cls: cls, attrs: attrs, style: style, seen: !face && card.seenByMe });
   }
 
   // ───────────────────────── rendering ─────────────────────────
@@ -247,10 +268,15 @@
     if (S.screen === 'home') html += homeHTML();
     else if (S.screen === 'lobby') html += lobbyHTML();
     else html += gameHTML();
+    nowUp = {};
     app.innerHTML = html;
+    app.classList.toggle('in-game', S.screen === 'game');
     var log = document.getElementById('log');
     if (log) log.scrollTop = log.scrollHeight;
     layoutScene();
+    S.prevUp = nowUp;
+    S.dealAnim = false;
+    S.banner = '';
   }
 
   function topbarHTML() {
@@ -331,12 +357,15 @@
     var opps = seatedOpponents();
     var n = g.players.length;
 
-    var html = '<div class="scene three-d" id="scene"><div class="table3d" id="table3d"><div class="felt" id="felt"></div>';
+    var html = '<div class="scene three-d" id="scene">' + dustHTML() + '<div class="table3d" id="table3d">';
+    for (var d = 6; d >= 1; d--) html += '<div class="edge" style="--d:' + d + '"></div>';
+    html += '<div class="felt" id="felt"></div><div class="emblem">CABO</div>';
     opps.forEach(function (p, i) {
       var angle = 90 + 360 * (i + 1) / n; // degrees, 90 = my seat at the bottom
       html += seatHTML(p, angle);
     });
     html += centerHTML() + '</div>';
+    if (S.banner) html += '<div class="banner">' + esc(S.banner) + '</div>';
     if (S.logOpen) {
       html += '<div class="log-panel"><h2>Log</h2><div class="log" id="log">' +
         g.log.map(function (e) { return '<div class="entry">' + esc(e.text) + '</div>'; }).join('') + '</div></div>';
@@ -345,6 +374,16 @@
     if (g.status === 'finished') html += resultsHTML();
     html += '</div>';
     return html;
+  }
+
+  function dustHTML() {
+    var out = '<div class="dust">';
+    for (var i = 0; i < 18; i++) {
+      var seed = (i * 9301 + 49297) % 233280 / 233280;
+      var seed2 = (i * 7919 + 104729) % 233280 / 233280;
+      out += '<i style="left:' + (5 + seed * 90) + '%;top:' + (10 + seed2 * 75) + '%;--dur:' + (12 + seed * 14) + 's;--delay:-' + (seed2 * 20) + 's;--dx:' + ((seed - 0.5) * 120) + 'px;--dy:' + (-60 - seed2 * 120) + 'px"></i>';
+    }
+    return out + '</div>';
   }
 
   function seatHTML(p, angle) {
@@ -360,29 +399,50 @@
     return '<div class="' + cls + '" data-angle="' + angle + '" style="--rot:' + rot + 'deg">' +
       '<div class="label"><span class="name">' + esc(p.name) + (mine ? ' (you)' : '') + '</span>' + tags +
       '<span class="count">' + p.cardCount + '</span></div>' +
-      '<div class="grid">' + p.cards.map(function (c) { return cardHTML(p.id, c); }).join('') + '</div></div>';
+      '<div class="grid">' + p.cards.map(function (c, i) { return cardHTML(p.id, c, i); }).join('') + '</div></div>';
+  }
+
+  function ghosts(count, white) {
+    var n = Math.min(4, Math.max(0, count - 1));
+    var out = '';
+    for (var i = n; i >= 1; i--) {
+      var rot = white ? ((i * 37) % 11 - 5) : 0;
+      out += '<span class="ghost' + (white ? ' white' : '') + '" style="transform:translate(' + (-i * 1.5) + 'px,' + (-i * 1.5) + 'px) rotate(' + rot + 'deg)"></span>';
+    }
+    return out;
   }
 
   function centerHTML() {
     var g = S.game;
     var myTurn = g.turnPlayerId === S.me;
     var canDraw = g.status === 'playing' && myTurn && g.phase === 'draw' && !g.pendingGive;
-    var deck = canDraw
-      ? cardBackHTML('clickable', 'data-action="draw" title="Draw"')
-      : cardBackHTML('', 'disabled');
     var canPlay = g.status === 'playing' && myTurn && g.phase === 'hold';
-    var playAttrs = canPlay ? 'data-action="discardHeld" title="Play the drawn card here"' : '';
-    var played = g.discardTop
-      ? cardFaceHTML(g.discardTop, canPlay ? 'clickable drop' : '', canPlay ? playAttrs : 'disabled')
-      : '<div class="empty' + (canPlay ? ' clickable drop' : '') + '" ' + playAttrs + '></div>';
+
+    var deck = '<div class="stack">' + ghosts(g.deckCount, false) +
+      cardEl({ up: false, cls: canDraw ? 'clickable' : '', attrs: canDraw ? 'data-action="draw" title="Draw"' : 'disabled' }) + '</div>';
+
+    var playAttrs = canPlay ? 'data-action="discardHeld" title="Play the drawn card here"' : 'disabled';
+    var landed = g.discardTop && g.discardTop.id !== S.lastTopId;
+    if (g.discardTop) S.lastTopId = g.discardTop.id;
+    var played = '<div class="stack">' + ghosts(g.discardCount, true) +
+      (g.discardTop
+        ? cardEl({ up: true, card: g.discardTop, cls: (canPlay ? 'clickable drop' : '') + (landed ? ' land' : ''), attrs: playAttrs })
+        : '<div class="empty' + (canPlay ? ' clickable drop' : '') + '" ' + playAttrs + '></div>') + '</div>';
+
     var held = '';
     if (g.held) {
+      var drawKey = g.turnPlayerId + ':' + g.deckCount;
+      var fresh = drawKey !== S.lastDrawKey;
+      S.lastDrawKey = drawKey;
       held = '<div class="pile"><span class="plabel">' + (myTurn ? 'Drawn' : esc(nameOf(g.turnPlayerId)) + ' drew') + '</span>' +
-        (g.held.card ? cardFaceHTML(g.held.card, '', 'disabled') : cardBackHTML('', 'disabled')) + '</div>';
+        cardEl({ up: !!g.held.card, card: g.held.card, cls: fresh ? 'draw-in' : '', attrs: 'disabled' }) + '</div>';
+    } else {
+      S.lastDrawKey = '';
     }
+    var live = g.status === 'playing' && g.phase === 'settle';
     return '<div class="center">' +
       '<div class="pile"><span class="plabel">Draw · ' + g.deckCount + '</span>' + deck + '</div>' +
-      '<div class="pile"><span class="plabel">Played · ' + g.discardCount + '</span>' + played + '</div>' +
+      '<div class="pile' + (live ? ' live' : '') + '"><span class="plabel">Played · ' + g.discardCount + '</span>' + played + '</div>' +
       held + '</div>';
   }
 
@@ -452,7 +512,7 @@
     var rows = sorted.map(function (s) {
       var win = r.winners.indexOf(s.id) !== -1;
       return '<tr class="' + (win ? 'winner' : '') + '"><td>' + esc(s.name) + (s.calledCabo ? ' <span class="tag accent">cabo</span>' : '') + (win ? ' <span class="tag ok">winner</span>' : '') + '</td>' +
-        '<td><div class="hand">' + s.cards.map(function (c) { return cardFaceHTML(c, '', 'disabled'); }).join('') + '</div></td>' +
+        '<td><div class="hand">' + s.cards.map(function (c) { return cardEl({ up: true, card: c, attrs: 'disabled' }); }).join('') + '</div></td>' +
         '<td class="mono">' + s.total + '</td></tr>';
     }).join('');
     var buttons = isHost()
@@ -475,12 +535,15 @@
     var cx = W / 2, cy = H * 0.45;
     var rx = W * 0.40, ry = Math.max(120, (H - dockH) * 0.46);
 
-    var felt = document.getElementById('felt');
-    if (felt) {
-      felt.style.width = (rx * 2.6) + 'px';
-      felt.style.height = (ry * 2.9) + 'px';
-      felt.style.left = cx + 'px';
-      felt.style.top = cy + 'px';
+    var plates = scene.querySelectorAll('.felt, .edge, .emblem');
+    for (var k = 0; k < plates.length; k++) {
+      var el = plates[k];
+      if (!el.classList.contains('emblem')) {
+        el.style.width = (rx * 2.6) + 'px';
+        el.style.height = (ry * 2.9) + 'px';
+      }
+      el.style.left = cx + 'px';
+      el.style.top = cy + 'px';
     }
 
     var seats = scene.querySelectorAll('.seat.opp');
@@ -507,6 +570,21 @@
   }
 
   window.addEventListener('resize', layoutScene);
+
+  // The table leans a few degrees toward the mouse.
+  app.addEventListener('mousemove', function (ev) {
+    var t = document.getElementById('table3d');
+    if (!t) return;
+    var r = app.getBoundingClientRect();
+    var px = (ev.clientX - r.left) / r.width - 0.5;
+    var py = (ev.clientY - r.top) / r.height - 0.5;
+    t.style.setProperty('--tx', (px * 7).toFixed(2) + 'deg');
+    t.style.setProperty('--ty', (-py * 5).toFixed(2) + 'deg');
+  });
+  app.addEventListener('mouseleave', function () {
+    var t = document.getElementById('table3d');
+    if (t) { t.style.setProperty('--tx', '0deg'); t.style.setProperty('--ty', '0deg'); }
+  });
 
   // ───────────────────────── interactions ─────────────────────────
 

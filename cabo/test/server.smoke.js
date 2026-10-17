@@ -22,7 +22,7 @@ function client(token) {
   c.send = (m) => ws.send(JSON.stringify(m));
   c.wait = (pred, ms = 3000) => new Promise((res, rej) => {
     const t0 = Date.now();
-    (function poll() { if (pred(c)) return res(); if (Date.now() - t0 > ms) return rej(new Error('timed out')); setTimeout(poll, 15); })();
+    (function poll() { if (pred(c)) return res(); if (Date.now() - t0 > ms) return rej(new Error('timed out waiting for: ' + pred.toString() + '\n  last log: ' + JSON.stringify(c.state && c.state.game && c.state.game.log.slice(-2).map((e) => e.text)) + ' errors: ' + JSON.stringify(c.errors))); setTimeout(poll, 15); })();
   });
   return new Promise((res, rej) => { ws.on('open', () => { c.send({ type: 'hello', token }); res(c); }); ws.on('error', rej); });
 }
@@ -38,6 +38,7 @@ function client(token) {
   b.send({ type: 'start' });
   await b.wait((c) => c.errors.length === 1);
   assert.match(b.errors[0], /host/);
+  b.errors.length = 0; // that error was expected
 
   a.send({ type: 'settings', settings: { handSize: 3 } });
   await b.wait((c) => c.state.lobby.settings.handSize === 3);
@@ -49,55 +50,65 @@ function client(token) {
 
   a.send({ type: 'ready' }); b.send({ type: 'ready' });
   await a.wait((c) => c.state.game.status === 'playing');
-  a.send({ type: 'draw' });
-  await a.wait((c) => c.state.game.phase === 'hold');
-  assert.ok(a.state.game.held.card.rank);
-  assert.equal(b.state.game.held.card, undefined, 'held card hidden from others');
-  a.send({ type: 'discardHeld' });
-  await a.wait((c) => c.state.game.phase !== 'hold');
-  if (a.state.game.phase === 'power') { a.send({ type: 'skipPower' }); await a.wait((c) => c.state.game.phase === 'settle'); }
-  assert.equal(a.state.game.phase, 'settle');
-  assert.equal(a.state.game.turnPlayerId, a.state.me, 'turn waits for everyone to be ready');
 
-  // Bob drops and comes back on a new socket with the same token, mid settle window.
-  b.ws.close();
-  await a.wait((c) => !c.state.lobby.players[1].connected);
-  const b2 = await client('smoke-token-bob');
-  await b2.wait((c) => c.msgs.some((m) => m.type === 'hello'));
-  b2.send({ type: 'rejoin', code: a.code });
-  await b2.wait((c) => c.state && c.state.game);
-  assert.equal(b2.state.me, a.state.lobby.players[1].id);
-  assert.ok(a.state.lobby.players[1].connected);
-  assert.equal(b2.state.game.phase, 'settle');
+  // The starting player is random: whoever it is plays, the other one watches and reconnects.
+  const annFirst = a.state.game.turnPlayerId === a.state.me;
+  const actor = annFirst ? a : b;
+  let watcher = annFirst ? b : a;
+  const watcherToken = annFirst ? 'smoke-token-bob' : 'smoke-token-ann';
+  const watcherIdx = annFirst ? 1 : 0;
+  const actorIdx = annFirst ? 0 : 1;
 
-  // Bob attempts a match on Ann's first card.
-  const target = b2.state.game.players[0].cards[0];
-  const before = b2.state.game.players[0].cardCount;
-  const revealsBefore = a.reveals.length;
-  b2.send({ type: 'snap', ownerId: a.state.me, cardId: target.id });
-  await b2.wait((c) => c.state.game.log.some((e) => /matches|guessed wrong/.test(e.text)));
-  const g = b2.state.game;
+  actor.send({ type: 'draw' });
+  await actor.wait((c) => c.state.game.phase === 'hold');
+  assert.ok(actor.state.game.held.card.rank);
+  assert.equal(watcher.state.game.held.card, undefined, 'held card hidden from others');
+  actor.send({ type: 'discardHeld' });
+  await actor.wait((c) => c.state.game.phase !== 'hold');
+  if (actor.state.game.phase === 'power') { actor.send({ type: 'skipPower' }); await actor.wait((c) => c.state.game.phase === 'settle'); }
+  assert.equal(actor.state.game.phase, 'settle');
+  assert.equal(actor.state.game.turnPlayerId, actor.state.me, 'turn waits for everyone to be ready');
+
+  // The watcher drops and comes back on a new socket with the same token, mid settle window.
+  watcher.ws.close();
+  await actor.wait((c) => !c.state.lobby.players[watcherIdx].connected);
+  const w2 = await client(watcherToken);
+  await w2.wait((c) => c.msgs.some((m) => m.type === 'hello'));
+  w2.send({ type: 'rejoin', code: a.code });
+  await w2.wait((c) => c.state && c.state.game);
+  assert.equal(w2.state.me, actor.state.lobby.players[watcherIdx].id);
+  assert.ok(actor.state.lobby.players[watcherIdx].connected);
+  assert.equal(w2.state.game.phase, 'settle');
+  watcher = w2;
+
+  // The watcher attempts a match on the actor's first card.
+  const target = w2.state.game.players[actorIdx].cards[0];
+  const before = w2.state.game.players[actorIdx].cardCount;
+  const revealsBefore = actor.reveals.length;
+  w2.send({ type: 'snap', ownerId: actor.state.me, cardId: target.id });
+  await w2.wait((c) => c.state.game.log.some((e) => /matches|guessed wrong/.test(e.text)));
+  const g = w2.state.game;
   if (g.pendingGive) {
-    assert.equal(g.players[0].cardCount, before - 1);
-    b2.send({ type: 'give', cardId: g.players[1].cards[0].id });
-    await b2.wait((c) => !c.state.game.pendingGive);
-    assert.equal(b2.state.game.players[0].cardCount, before);
+    assert.equal(g.players[actorIdx].cardCount, before - 1);
+    w2.send({ type: 'give', cardId: g.players[watcherIdx].cards[0].id });
+    await w2.wait((c) => !c.state.game.pendingGive);
+    assert.equal(w2.state.game.players[actorIdx].cardCount, before);
   } else {
-    assert.equal(g.players[1].cardCount, 4, 'penalty card drawn');
-    assert.equal(a.reveals.length, revealsBefore, 'wrong guess reveals nothing');
+    assert.equal(g.players[watcherIdx].cardCount, 4, 'penalty card drawn');
+    assert.equal(actor.reveals.length, revealsBefore, 'wrong guess reveals nothing');
   }
 
-  a.send({ type: 'ready' }); b2.send({ type: 'ready' });
-  await a.wait((c) => c.state.game.phase === 'draw');
-  assert.equal(a.state.game.turnPlayerId, b2.state.me);
+  actor.send({ type: 'ready' }); w2.send({ type: 'ready' });
+  await actor.wait((c) => c.state.game.phase === 'draw');
+  assert.equal(actor.state.game.turnPlayerId, w2.state.me);
 
-  a.send({ type: 'endGame' });
-  await b2.wait((c) => c.state.game === null);
-  assert.equal(b2.state.lobby.players.length, 2);
-  assert.deepEqual(a.errors, []);
-  assert.deepEqual(b2.errors, []);
+  (annFirst ? a : w2).send({ type: 'endGame' }); // Ann is the host; use her live socket
+  await watcher.wait((c) => c.state.game === null);
+  assert.equal(watcher.state.lobby.players.length, 2);
+  assert.deepEqual(actor.errors, []);
+  assert.deepEqual(watcher.errors, []);
 
   console.log('server smoke test ok');
-  a.ws.close(); b2.ws.close();
+  actor.ws.close(); watcher.ws.close();
   server.kill();
 })().catch((e) => { console.error('SMOKE FAIL', e); server.kill(); process.exit(1); });
