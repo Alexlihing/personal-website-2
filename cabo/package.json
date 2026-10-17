@@ -1,0 +1,18 @@
+{
+  "name": "cabo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Online Cabo card game served at /secret-cabo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/game.test.js && node test/server.smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}
