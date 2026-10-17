@@ -28,6 +28,8 @@ const DEFAULT_SETTINGS = { handSize: 4 };
 const app = express();
 app.disable('x-powered-by');
 
+app.get('/healthz', (req, res) => res.type('text').send('ok'));
+
 app.use('/secret-cabo', (req, res, next) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.setHeader('Cache-Control', 'no-store');
