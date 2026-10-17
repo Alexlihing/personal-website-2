@@ -92,12 +92,30 @@ test('turn order enforced; draw then discard or swap', () => {
   assert.ok(held.seenBy.includes('a'));
 });
 
+// Take a card matching pred out of wherever it is (deck or a hand). A hand slot
+// is refilled from the deck so hand sizes stay the same.
+function pull(g, pred) {
+  const i = g.deck.findIndex(pred);
+  if (i >= 0) return g.deck.splice(i, 1)[0];
+  for (const p of g.players) {
+    const j = p.hand.findIndex(pred);
+    if (j >= 0) { const c = p.hand[j]; p.hand[j] = g.deck.shift(); return c; }
+  }
+  throw new Error('no such card anywhere');
+}
+
 // Force a specific card to be the next draw.
-function rig(g, rank, suit) {
-  const i = g.deck.findIndex((c) => c.rank === rank && (!suit || c.suit === suit));
-  assert.ok(i >= 0, 'card available: ' + rank);
-  const [c] = g.deck.splice(i, 1);
+function rig(g, rank) {
+  const c = pull(g, (x) => x.rank === rank);
   g.deck.push(c);
+  return c;
+}
+
+// Put a card of the same rank as the discard top into a hand slot.
+function plantMatch(g, playerIdx, slot) {
+  const top = g.discard[g.discard.length - 1];
+  const c = pull(g, (x) => x.rank === top.rank);
+  g.players[playerIdx].hand[slot] = c;
   return c;
 }
 
@@ -124,7 +142,7 @@ test('7 peeks own card and marks it seen; power is optional', () => {
 test('replacing a card plays the replaced card (its power triggers)', () => {
   const g = mk(); readyAll(g);
   // make Ann's 4th card a 9 so the swap-out triggers peekOther
-  const nine = rig(g, '9'); g.deck.pop();
+  const nine = pull(g, (c) => c.rank === '9');
   g.players[0].hand[3] = nine;
   g.draw('a');
   g.swapHeld('a', nine.id);
@@ -198,9 +216,7 @@ test('matching: own card leaves the hand; wrong guess reveals and penalises', ()
   const g = mk(); readyAll(g);
   const top = g.discard[g.discard.length - 1];
   // give Bob a card of the same rank as the top, and Cat a different one
-  const match = g.deck.find((c) => c.rank === top.rank);
-  g.deck.splice(g.deck.indexOf(match), 1);
-  g.players[1].hand[2] = match;
+  const match = plantMatch(g, 1, 2);
   const wrongCard = g.players[2].hand.find((c) => c.rank !== top.rank);
   const deckBefore = g.deck.length;
 
@@ -218,10 +234,7 @@ test('matching: own card leaves the hand; wrong guess reveals and penalises', ()
 
 test("matching someone else's card gives them one of yours; actions wait for the give", () => {
   const g = mk(); readyAll(g);
-  const top = g.discard[g.discard.length - 1];
-  const match = g.deck.find((c) => c.rank === top.rank);
-  g.deck.splice(g.deck.indexOf(match), 1);
-  g.players[1].hand[2] = match;
+  const match = plantMatch(g, 1, 2);
 
   g.snap('c', 'b', match.id);
   assert.deepEqual(g.pendingGive, { from: 'c', to: 'b' });
@@ -239,10 +252,7 @@ test("matching someone else's card gives them one of yours; actions wait for the
 
 test('game ends when a player runs out of cards', () => {
   const g = mk({ handSize: 1 }); readyAll(g);
-  const top = g.discard[g.discard.length - 1];
-  const match = g.deck.find((c) => c.rank === top.rank);
-  g.deck.splice(g.deck.indexOf(match), 1);
-  g.players[0].hand[0] = match;
+  const match = plantMatch(g, 0, 0);
   g.snap('a', 'a', match.id);
   assert.equal(g.status, 'finished');
   assert.ok(g.result.winners.includes('a'));
