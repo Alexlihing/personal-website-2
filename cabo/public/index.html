@@ -10,6 +10,13 @@
 <body>
   <div id="app" class="app"></div>
   <div id="toast" class="toast" hidden></div>
+  <script>
+    // When the page is served through alex-li.com (a static host), the live
+    // connection goes straight to the game server on Render.
+    if (/(^|\.)alex-li\.com$|\.netlify\.app$/.test(location.hostname)) {
+      window.CABO_WS_URL = 'wss://cabo-3eqa.onrender.com/secret-cabo/ws';
+    }
+  </script>
   <script src="cabo.js?v=1"></script>
 </body>
 </html>

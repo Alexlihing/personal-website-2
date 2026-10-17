@@ -1,0 +1,7 @@
+# Private Cabo game: the page and its assets are proxied from the Render server,
+# so https://alex-li.com/secret-cabo keeps working without a server on Netlify.
+/secret-cabo      /secret-cabo/                                        301
+/secret-cabo/*    https://cabo-3eqa.onrender.com/secret-cabo/:splat    200
+
+# The server source folder is in this repo; never publish it through the site.
+/cabo/*           /404.html                                            404
