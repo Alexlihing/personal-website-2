@@ -6,7 +6,7 @@
 
 const crypto = require('crypto');
 
-const INITIAL_PEEK = 2; // every player looks at their first two cards before play starts
+const INITIAL_PEEK = 2; // every player looks at their bottom row (last two cards) before play starts
 
 const SUITS = ['S', 'H', 'D', 'C'];
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -76,7 +76,7 @@ class Game {
     this.deck = shuffle(makeDeck());
     this.discard = [];
     this.turn = 0;
-    this.phase = 'draw'; // draw | hold | power
+    this.phase = 'draw'; // draw | hold | power | settle
     this.held = null; // { card }
     this.power = null; // { type, actorId, stage, rank, myCardId?, theirCardId? }
     this.pendingGive = null; // { from, to }
@@ -89,7 +89,6 @@ class Game {
     for (let i = 0; i < settings.handSize; i++) {
       for (const p of this.players) p.hand.push(this.deck.pop());
     }
-    this.discard.push(this.deck.pop());
     this._log(`Cards dealt. ${this.players.length} players, ${settings.handSize} cards each.`);
 
     for (const p of this.players) {
@@ -103,7 +102,8 @@ class Game {
   // ───────────────────────── helpers ─────────────────────────
 
   initialPeekCards(playerId) {
-    return this._player(playerId).hand.slice(0, INITIAL_PEEK).map((c) => c);
+    const hand = this._player(playerId).hand;
+    return hand.slice(Math.max(0, hand.length - INITIAL_PEEK));
   }
 
   _log(text) {
@@ -153,7 +153,7 @@ class Game {
       const top = this.discard.pop();
       this.deck = shuffle(this.discard);
       this.discard = [top];
-      this._log('Draw pile empty. Discard pile reshuffled into a new draw pile.');
+      this._log('Draw pile empty. The played pile was reshuffled into a new draw pile.');
     }
     return this.deck.pop();
   }
@@ -174,7 +174,18 @@ class Game {
     return false;
   }
 
-  _endTurn() {
+  // After a card is played (and any power resolved) everyone gets a window to
+  // match the top card, then every player presses Ready to move on.
+  _startSettle() {
+    this.held = null;
+    this.power = null;
+    this.phase = 'settle';
+    for (const p of this.players) p.ready = false;
+    const top = this.discard[this.discard.length - 1];
+    this._log(`Anyone may match the ${top.rank}. Press Ready to continue.`);
+  }
+
+  _advanceTurn() {
     this.held = null;
     this.power = null;
     if (this._checkEmptyHands()) return;
@@ -222,7 +233,7 @@ class Game {
       this.power = { type, actorId: actor.id, stage: 'choose', rank: card.rank };
       this._log(`${actor.name} may use the ${card.rank}: ${POWER_LABEL[type]}.`);
     } else {
-      this._endTurn();
+      this._startSettle();
     }
   }
 
@@ -235,10 +246,19 @@ class Game {
   // ───────────────────────── actions ─────────────────────────
 
   ready(playerId) {
-    if (this.status !== 'peek') throw new Error('Nothing to get ready for.');
     const p = this._player(playerId);
-    p.ready = true;
-    if (this.players.every((x) => x.ready)) this._beginPlay();
+    if (this.status === 'peek') {
+      p.ready = true;
+      if (this.players.every((x) => x.ready)) this._beginPlay();
+      return;
+    }
+    if (this.status === 'playing' && this.phase === 'settle') {
+      if (this.pendingGive) throw new Error(`Waiting for ${this._player(this.pendingGive.from).name} to give a card.`);
+      p.ready = true;
+      if (this.players.every((x) => x.ready)) this._advanceTurn();
+      return;
+    }
+    throw new Error('Nothing to get ready for.');
   }
 
   callCabo(playerId) {
@@ -246,7 +266,7 @@ class Game {
     if (this.caboCallerId) throw new Error('Cabo has already been called.');
     this.caboCallerId = playerId;
     this._log(`${this._current().name} calls CABO! Everyone else gets one last turn.`);
-    this._endTurn();
+    this._advanceTurn();
   }
 
   draw(playerId) {
@@ -269,7 +289,7 @@ class Game {
     const card = this.held.card;
     this._markSeen(card, 'all');
     this.discard.push(card);
-    this._log(`${actor.name} discards the ${cardName(card)}.`);
+    this._log(`${actor.name} plays the ${cardName(card)}.`);
     this._afterDiscard(actor, card);
   }
 
@@ -280,7 +300,7 @@ class Game {
     actor.hand[index] = this.held.card;
     this._markSeen(old, 'all');
     this.discard.push(old);
-    this._log(`${actor.name} swaps the drawn card into their hand and discards the ${cardName(old)}.`);
+    this._log(`${actor.name} takes the drawn card and plays the ${cardName(old)} from their hand.`);
     this._afterDiscard(actor, old);
   }
 
@@ -292,7 +312,7 @@ class Game {
     } else {
       this._log(`${actor.name} skips the ${this.power.rank} power.`);
     }
-    this._endTurn();
+    this._startSettle();
   }
 
   usePower(playerId, payload = {}) {
@@ -306,7 +326,7 @@ class Game {
       this._markSeen(card, playerId);
       this._reveal(playerId, [{ ownerId: playerId, ...publicCard(card) }], 'Your card');
       this._log(`${actor.name} peeks at one of their own cards.`);
-      this._endTurn();
+      this._startSettle();
       return;
     }
 
@@ -316,7 +336,7 @@ class Game {
       this._markSeen(card, playerId);
       this._reveal(playerId, [{ ownerId: owner.id, ...publicCard(card) }], `${owner.name}'s card`);
       this._log(`${actor.name} peeks at one of ${owner.name}'s cards.`);
-      this._endTurn();
+      this._startSettle();
       return;
     }
 
@@ -329,7 +349,7 @@ class Game {
       if (theirs.card.seenBy.includes(playerId)) throw new Error("You've already seen that card, so it can't be blind swapped.");
       this._swapCards(mine, theirs);
       this._log(`${actor.name} blind swaps a card with ${theirs.owner.name}.`);
-      this._endTurn();
+      this._startSettle();
       return;
     }
 
@@ -357,21 +377,21 @@ class Game {
     const actor = this._current();
     if (!doSwap) {
       this._log(`${actor.name} keeps their cards as they are.`);
-      this._endTurn();
+      this._startSettle();
       return;
     }
     const mine = this._findCard(playerId, this.power.myCardId);
     const theirs = this._findCard(this.power.theirPlayerId, this.power.theirCardId);
     this._swapCards(mine, theirs);
     this._log(`${actor.name} swaps a card with ${theirs.owner.name}.`);
-    this._endTurn();
+    this._startSettle();
   }
 
-  // Anyone may claim that a face-down card matches the top of the discard pile.
+  // During the settle window anyone may claim a face-down card matches the top of the played pile.
   snap(playerId, ownerId, cardId) {
     if (this.status !== 'playing') throw new Error('The game is not in progress.');
+    if (this.phase !== 'settle') throw new Error('Cards can only be matched right after a card is played.');
     if (this.pendingGive) throw new Error(`Waiting for ${this._player(this.pendingGive.from).name} to give a card.`);
-    if (this.discard.length === 0) throw new Error('There is no card to match.');
     const snapper = this._player(playerId);
     const top = this.discard[this.discard.length - 1];
     const { owner, card, index } = this._findCard(ownerId, cardId);
@@ -382,14 +402,7 @@ class Game {
       this.discard.push(card);
       const whose = owner.id === playerId ? 'their own' : `${owner.name}'s`;
       this._log(`${snapper.name} matches ${whose} ${cardName(card)} with the ${top.rank} on the pile!`);
-
-      // A pending Queen decision involving this card can no longer be completed.
-      if (this.power && this.power.stage === 'decide' &&
-          (this.power.myCardId === card.id || this.power.theirCardId === card.id)) {
-        this._log('The pending swap is cancelled because one of its cards was matched away.');
-        this._endTurn();
-        if (this.status !== 'playing') return;
-      }
+      for (const p of this.players) p.ready = false; // everyone gets a look at the new state
 
       if (owner.id !== playerId && snapper.hand.length > 0) {
         this.pendingGive = { from: playerId, to: owner.id };
@@ -400,15 +413,14 @@ class Game {
       return;
     }
 
-    // Wrong guess: everyone sees the card, and the snapper draws a penalty card.
-    this._markSeen(card, 'all');
-    this._reveal('all', [{ ownerId: owner.id, ...publicCard(card) }], `${snapper.name} guessed wrong`);
+    // Wrong guess: the card stays hidden and the snapper draws a penalty card.
+    const whoseCard = owner.id === playerId ? 'their own' : `${owner.name}'s`;
     const penalty = this._drawFromDeck();
     if (penalty) {
       snapper.hand.push(penalty);
-      this._log(`${snapper.name} tried to match ${owner.id === playerId ? 'their own' : owner.name + "'s"} card, but it was the ${cardName(card)}. ${snapper.name} draws a penalty card.`);
+      this._log(`${snapper.name} guessed wrong on ${whoseCard} card and draws a penalty card.`);
     } else {
-      this._log(`${snapper.name} tried to match a card, but it was the ${cardName(card)}. No cards left for a penalty.`);
+      this._log(`${snapper.name} guessed wrong on ${whoseCard} card. No cards left for a penalty.`);
     }
   }
 

@@ -20,6 +20,7 @@
     token: store.get('cabo.token') || randomToken(),
     name: store.get('cabo.name') || '',
     code: store.get('cabo.code') || '',
+    inviteCode: (new URLSearchParams(location.search).get('code') || '').toUpperCase(),
     screen: 'home',
     connected: false,
     lobby: null,
@@ -28,7 +29,7 @@
     reveals: {},          // "ownerId:cardId" → { rank, suit, value, timer }
     revealNote: '',
     sel: { mine: null, theirs: null },
-    snapMode: false,
+    logOpen: window.innerWidth > 900,
     ws: null,
     retry: 0,
   };
@@ -83,6 +84,7 @@
         break;
       case 'joined':
         S.code = msg.code;
+        S.inviteCode = '';
         store.set('cabo.code', S.code);
         history.replaceState(null, '', location.pathname);
         break;
@@ -116,10 +118,8 @@
     S.screen = S.game ? 'game' : 'lobby';
     if (!S.game || (prevGame && prevGame.status === 'peek' && S.game.status !== 'peek')) clearReveals();
     if (S.game) {
-      // Drop selections / snap mode when they no longer make sense.
       var myTurn = S.game.turnPlayerId === S.me;
       if (!(myTurn && S.game.phase === 'power')) S.sel = { mine: null, theirs: null };
-      if (S.game.status !== 'playing') S.snapMode = false;
       if (S.game.status === 'finished') clearReveals();
     }
     render();
@@ -178,30 +178,28 @@
     return null;
   }
   function isHost() { return S.lobby && S.lobby.hostId === S.me; }
-
-  function rankLabel(rank) { return rank; }
+  function cardLabel(card) { return card.rank + SUIT_CHAR[card.suit]; }
 
   function cardFaceHTML(card, extraCls, attrs) {
     var red = card.suit === 'H' || card.suit === 'D';
     return '<button type="button" class="card ' + (red ? 'red ' : '') + (extraCls || '') + '" ' + (attrs || '') + '>' +
-      '<span class="rank">' + rankLabel(card.rank) + '</span><span class="suit">' + SUIT_CHAR[card.suit] + '</span>' +
+      '<span class="face"><span class="rank">' + card.rank + '</span><span class="suit">' + SUIT_CHAR[card.suit] + '</span></span>' +
       '<span class="val">' + card.value + '</span></button>';
   }
 
-  function cardBackHTML(extraCls, attrs, peekMark) {
+  function cardBackHTML(extraCls, attrs, seenMark) {
     return '<button type="button" class="card down ' + (extraCls || '') + '" ' + (attrs || '') + '>' +
-      (peekMark ? '<span class="peek">seen</span>' : '') + '</button>';
+      '<span class="face">' + (seenMark ? '<span class="seen">seen</span>' : '') + '</span></button>';
   }
 
-  // Which click action a given card currently has for me, if any.
+  // Which single-click action a given card currently has for me, if any.
   function cardAction(ownerId, card) {
     var g = S.game;
     if (!g || g.status !== 'playing') return null;
-    if (S.snapMode) return 'snap';
     if (g.pendingGive) {
       return (g.pendingGive.from === S.me && ownerId === S.me) ? 'give' : null;
     }
-    if (g.turnPlayerId !== S.me) return null;
+    if (g.phase === 'settle' || g.turnPlayerId !== S.me) return null;
     var own = ownerId === S.me;
     if (g.phase === 'hold') return own ? 'swapHeld' : null;
     if (g.phase === 'power' && g.power && g.power.stage === 'choose') {
@@ -214,6 +212,11 @@
     return null;
   }
 
+  function canMatch() {
+    var g = S.game;
+    return g && g.status === 'playing' && g.phase === 'settle' && !g.pendingGive;
+  }
+
   function cardHTML(ownerId, card) {
     var key = ownerId + ':' + card.id;
     var action = cardAction(ownerId, card);
@@ -222,7 +225,7 @@
     if (action && action !== 'blocked') cls += ' clickable';
     if (action === 'blocked') cls += ' blocked';
     if (action) attrs += ' data-action="' + action + '"';
-    if (S.snapMode) cls += ' snap-target';
+    if (canMatch()) cls += ' matchable';
     if (S.sel.mine === card.id || (S.sel.theirs && S.sel.theirs.cardId === card.id)) cls += ' selected';
 
     var reveal = S.reveals[key];
@@ -243,6 +246,7 @@
     app.innerHTML = html;
     var log = document.getElementById('log');
     if (log) log.scrollTop = log.scrollHeight;
+    layoutScene();
   }
 
   function topbarHTML() {
@@ -252,29 +256,32 @@
       var turn = S.game.turnPlayerId === S.me ? 'Your turn' : nameOf(S.game.turnPlayerId) + "'s turn";
       mid = '<span class="status live">' + esc(turn) + (S.game.caboCallerId ? ' · CABO called by ' + esc(nameOf(S.game.caboCallerId)) : '') + '</span>';
     }
-    var right = S.screen === 'home'
-      ? '<span class="status">' + status + '</span>'
-      : '<span class="status">' + status + '</span> <button class="btn small" data-action="leave">Leave</button>';
-    return '<div class="topbar"><div class="brand">Cabo' + (S.code ? '<small>LOBBY ' + esc(S.code) + '</small>' : '') + '</div>' + mid + '<div>' + right + '</div></div>';
+    var right = '<span class="status">' + status + '</span>';
+    if (S.screen === 'game') right += '<button class="btn small' + (S.logOpen ? ' active' : '') + '" data-action="toggleLog">Log</button>';
+    if (S.screen !== 'home') right += '<button class="btn small" data-action="leave">Leave</button>';
+    return '<div class="topbar"><div class="brand">Cabo' + (S.code ? '<small>LOBBY ' + esc(S.code) + '</small>' : '') + '</div>' + mid + '<div class="right">' + right + '</div></div>';
   }
 
   function homeHTML() {
-    var params = new URLSearchParams(location.search);
-    var prefill = (params.get('code') || '').toUpperCase();
-    return '<div class="centered"><div>' +
-      '<div class="panel">' +
+    var nameField = '<div class="field"><label for="name">Your name</label><input id="name" type="text" maxlength="20" placeholder="e.g. Alex" value="' + esc(S.name) + '" autocomplete="off" /></div>';
+    if (S.inviteCode) {
+      return '<div class="centered"><div class="panel">' +
+        '<div class="home-title"><h1>Cabo</h1><p>You\'re invited to lobby</p><div class="code">' + esc(S.inviteCode) + '</div></div>' +
+        '<div class="stack">' + nameField +
+          '<button class="btn primary" data-action="join">Join lobby</button>' +
+          '<div style="text-align:center"><a class="link" href="' + esc(location.pathname) + '">Wrong lobby? Start over</a></div>' +
+        '</div></div></div>';
+    }
+    return '<div class="centered"><div class="panel">' +
         '<div class="home-title"><h1>Cabo</h1><p>Lowest hand wins.</p></div>' +
-        '<div class="stack">' +
-          '<div class="field"><label for="name">Your name</label><input id="name" type="text" maxlength="20" placeholder="e.g. Alex" value="' + esc(S.name) + '" /></div>' +
+        '<div class="stack">' + nameField +
           '<button class="btn primary" data-action="create">Create a lobby</button>' +
           '<hr class="divider" />' +
-          '<div class="row"><div class="field"><label for="code">Join code</label><input id="code" type="text" maxlength="5" placeholder="ABCDE" style="text-transform:uppercase;font-family:var(--font-mono);letter-spacing:0.2em" value="' + esc(prefill) + '" /></div>' +
+          '<div class="row"><div class="field"><label for="code">Join code</label><input id="code" type="text" maxlength="5" placeholder="ABCDE" autocomplete="off" style="text-transform:uppercase;font-family:var(--font-mono);letter-spacing:0.2em" /></div>' +
           '<button class="btn" data-action="join">Join lobby</button></div>' +
         '</div>' +
-      '</div>' +
-    '</div></div>';
+      '</div></div>';
   }
-
 
   function lobbyHTML() {
     var L = S.lobby;
@@ -287,15 +294,15 @@
         (host && p.id !== S.me ? '<button class="btn small danger" data-action="kick" data-player="' + p.id + '">Remove</button>' : '') +
       '</li>';
     }).join('');
-    var dis = host ? '' : ' disabled';
+    var peek = Math.min(2, s.handSize);
     return '<div class="centered"><div class="panel" style="max-width:600px">' +
       '<div class="code-display"><div><h2>Join code</h2><div class="code">' + esc(L.code) + '</div></div>' +
         '<button class="btn" data-action="copy">Copy invite link</button></div>' +
       '<h2>Players (' + L.players.length + ')</h2><ul class="player-list">' + players + '</ul>' +
       '<h2>Settings' + (host ? '' : ' <span class="muted">(host only)</span>') + '</h2>' +
       '<div class="settings-grid">' +
-        '<div class="field"><label>Cards per player</label><input type="number" min="1" max="8" data-setting="handSize" value="' + s.handSize + '"' + dis + ' /></div>' +
-        '<div class="field"><label>You peek at first</label><div class="hint" style="padding:0.55rem 0">' + Math.min(2, s.handSize) + ' card' + (Math.min(2, s.handSize) === 1 ? '' : 's') + '</div></div>' +
+        '<div class="field"><label>Cards per player</label><input type="number" min="1" max="8" step="2" data-setting="handSize" value="' + s.handSize + '"' + (host ? '' : ' disabled') + ' /></div>' +
+        '<div class="field"><label>You peek at first</label><div class="hint" style="padding:0.55rem 0">bottom row (' + peek + ' card' + (peek === 1 ? '' : 's') + ')</div></div>' +
       '</div>' +
       '<div class="lobby-actions">' +
         '<span class="hint">' + (host ? 'Start when everyone is in.' : 'Waiting for the host to start.') + '</span>' +
@@ -304,35 +311,52 @@
     '</div></div>';
   }
 
+  // Opponents in turn order starting after me, seated clockwise around the table.
+  function seatedOpponents() {
+    var ps = S.game.players;
+    var myIdx = 0;
+    for (var i = 0; i < ps.length; i++) if (ps[i].id === S.me) myIdx = i;
+    var out = [];
+    for (var k = 1; k < ps.length; k++) out.push(ps[(myIdx + k) % ps.length]);
+    return out;
+  }
+
   function gameHTML() {
     var g = S.game;
-    var opponents = g.players.filter(function (p) { return p.id !== S.me; });
     var me = playerById(S.me);
+    var opps = seatedOpponents();
+    var n = g.players.length;
 
-    var html = '<div class="table"><div class="felt">';
-    html += '<div class="seats">' + opponents.map(seatHTML).join('') + '</div>';
+    var html = '<div class="scene" id="scene"><div class="felt" id="felt"></div>';
+    opps.forEach(function (p, i) {
+      var angle = 90 + 360 * (i + 1) / n; // degrees, 90 = my seat at the bottom
+      html += seatHTML(p, angle);
+    });
     html += centerHTML();
+    if (S.logOpen) {
+      html += '<div class="log-panel"><h2>Log</h2><div class="log" id="log">' +
+        g.log.map(function (e) { return '<div class="entry">' + esc(e.text) + '</div>'; }).join('') + '</div></div>';
+    }
+    html += '<div class="dock">' + actionsHTML() + (me ? seatHTML(me, 90) : '') + '</div>';
     if (g.status === 'finished') html += resultsHTML();
-    html += actionsHTML();
-    if (me) html += '<div class="my-area">' + seatHTML(me) + '</div>';
-    html += '</div>';
-    html += '<aside class="side"><h2>Log</h2><div class="log" id="log">' +
-      g.log.map(function (e) { return '<div class="entry">' + esc(e.text) + '</div>'; }).join('') + '</div></aside>';
     html += '</div>';
     return html;
   }
 
-  function seatHTML(p) {
+  function seatHTML(p, angle) {
     var g = S.game;
     var lp = lobbyPlayer(p.id);
-    var cls = 'seat' + (p.id === S.me ? ' me' : '') + (g.turnPlayerId === p.id ? ' turn' : '') + (lp && !lp.connected ? ' offline' : '');
+    var mine = p.id === S.me;
+    var rot = Math.round(angle - 90);
+    var cls = 'seat ' + (mine ? 'me' : 'opp') + (g.turnPlayerId === p.id ? ' turn' : '') + (lp && !lp.connected ? ' offline' : '');
     var tags = '';
     if (g.caboCallerId === p.id) tags += '<span class="tag accent">cabo</span>';
-    if (g.status === 'peek') tags += '<span class="tag">' + (p.ready ? 'ready' : 'looking') + '</span>';
+    if (g.status === 'peek' || (g.status === 'playing' && g.phase === 'settle')) tags += p.ready ? '<span class="tag ok">ready</span>' : '';
     if (lp && !lp.connected) tags += '<span class="tag">offline</span>';
-    return '<div class="' + cls + '"><div class="seat-head"><span class="name">' + esc(p.name) + (p.id === S.me ? ' (you)' : '') + '</span>' + tags +
-      '<span class="count">' + p.cardCount + ' card' + (p.cardCount === 1 ? '' : 's') + '</span></div>' +
-      '<div class="hand">' + p.cards.map(function (c) { return cardHTML(p.id, c); }).join('') + '</div></div>';
+    return '<div class="' + cls + '" data-angle="' + angle + '" style="--rot:' + rot + 'deg">' +
+      '<div class="label"><span class="name">' + esc(p.name) + (mine ? ' (you)' : '') + '</span>' + tags +
+      '<span class="count">' + p.cardCount + '</span></div>' +
+      '<div class="grid">' + p.cards.map(function (c) { return cardHTML(p.id, c); }).join('') + '</div></div>';
   }
 
   function centerHTML() {
@@ -342,15 +366,15 @@
     var deck = canDraw
       ? cardBackHTML('clickable', 'data-action="draw" title="Draw"')
       : cardBackHTML('', 'disabled');
-    var discard = g.discardTop ? cardFaceHTML(g.discardTop, '', 'disabled') : '<div class="empty"></div>';
+    var played = g.discardTop ? cardFaceHTML(g.discardTop, '', 'disabled') : '<div class="empty"></div>';
     var held = '';
     if (g.held) {
-      held = '<div class="pile"><span class="label">' + (myTurn ? 'Drawn' : nameOf(g.turnPlayerId) + ' holds') + '</span>' +
-        (g.held.card ? cardFaceHTML(g.held.card, 'big', 'disabled') : cardBackHTML('big', 'disabled')) + '</div>';
+      held = '<div class="pile"><span class="plabel">' + (myTurn ? 'Drawn' : esc(nameOf(g.turnPlayerId)) + ' drew') + '</span>' +
+        (g.held.card ? cardFaceHTML(g.held.card, '', 'disabled') : cardBackHTML('', 'disabled')) + '</div>';
     }
     return '<div class="center">' +
-      '<div class="pile"><span class="label">Draw · ' + g.deckCount + '</span>' + deck + '</div>' +
-      '<div class="pile"><span class="label">Discard · ' + g.discardCount + '</span>' + discard + '</div>' +
+      '<div class="pile"><span class="plabel">Draw · ' + g.deckCount + '</span>' + deck + '</div>' +
+      '<div class="pile"><span class="plabel">Played · ' + g.discardCount + '</span>' + played + '</div>' +
       held + '</div>';
   }
 
@@ -361,37 +385,35 @@
     var alert = false;
     var myTurn = g.turnPlayerId === S.me;
     var me = playerById(S.me);
+    var notReady = g.players.filter(function (p) { return !p.ready; }).map(function (p) { return p.name; });
 
     if (hasReveals() && g.status !== 'peek') {
       buttons.push('<button class="btn small" data-action="hideReveals">Hide revealed cards</button>');
     }
 
     if (g.status === 'peek') {
-      var waiting = g.players.filter(function (p) { return !p.ready; }).map(function (p) { return p.name; });
       if (me && me.ready) {
-        prompt = 'Waiting for ' + esc(waiting.join(', ')) + ' to finish looking.';
+        prompt = 'Waiting for ' + esc(notReady.join(', ')) + ' to finish looking.';
       } else {
-        prompt = 'Memorize your highlighted card' + (g.initialPeek > 1 ? 's' : '') + ', then press Ready.';
+        prompt = 'Memorize your bottom row, then press Ready.';
         buttons.push('<button class="btn primary" data-action="ready">Ready</button>');
       }
     } else if (g.status === 'finished') {
       prompt = esc(g.result.reason);
-      if (isHost()) {
-        buttons.push('<button class="btn primary" data-action="start">Play again</button>');
-        buttons.push('<button class="btn" data-action="endGame">Back to lobby</button>');
-      } else {
-        prompt += ' Waiting for the host to start another game.';
-      }
-    } else if (S.snapMode) {
-      alert = true;
-      prompt = 'Click any face-down card you think is a <strong>' + esc(g.discardTop.rank) + '</strong>. Wrong guesses cost a penalty card.';
-      buttons.push('<button class="btn" data-action="snapMode">Cancel</button>');
     } else if (g.pendingGive) {
       if (g.pendingGive.from === S.me) {
         alert = true;
         prompt = 'You matched <strong>' + esc(nameOf(g.pendingGive.to)) + '</strong>\'s card. Click one of your cards to give them.';
       } else {
         prompt = 'Waiting for ' + esc(nameOf(g.pendingGive.from)) + ' to give ' + esc(nameOf(g.pendingGive.to)) + ' a card.';
+      }
+    } else if (g.phase === 'settle') {
+      if (me && me.ready) {
+        prompt = 'Waiting for ' + esc(notReady.join(', ')) + ' to be ready.';
+      } else {
+        alert = true;
+        prompt = 'A <strong>' + esc(g.discardTop.rank) + '</strong> is on the pile. Double-click any card you think matches it, then press Ready.';
+        buttons.push('<button class="btn primary" data-action="ready">Ready</button>');
       }
     } else if (!myTurn) {
       var who = esc(nameOf(g.turnPlayerId));
@@ -403,8 +425,8 @@
       buttons.push('<button class="btn primary" data-action="draw">Draw</button>');
       if (!g.caboCallerId) buttons.push('<button class="btn danger" data-action="cabo">Call Cabo</button>');
     } else if (g.phase === 'hold') {
-      prompt = 'You drew a <strong>' + esc(g.held.card.rank + SUIT_CHAR[g.held.card.suit]) + '</strong>. Discard it, or click one of your cards to replace.';
-      buttons.push('<button class="btn primary" data-action="discardHeld">Discard it</button>');
+      prompt = 'You drew a <strong>' + esc(cardLabel(g.held.card)) + '</strong>. Play it, or click one of your cards to swap it in.';
+      buttons.push('<button class="btn primary" data-action="discardHeld">Play it</button>');
     } else if (g.phase === 'power') {
       var t = g.power.type;
       if (g.power.stage === 'decide') {
@@ -424,10 +446,6 @@
       }
     }
 
-    if (g.status === 'playing' && !S.snapMode && !g.pendingGive && g.discardTop) {
-      buttons.push('<button class="btn" data-action="snapMode" title="Claim a face-down card matches the discard pile">Match the ' + esc(g.discardTop.rank) + '</button>');
-    }
-
     var note = (S.revealNote && hasReveals() && g.status !== 'peek') ? ' <span class="muted">(' + esc(S.revealNote) + ')</span>' : '';
     return '<div class="actions' + (alert ? ' alert' : '') + '"><div class="prompt">' + prompt + note + '</div><div class="buttons">' + buttons.join('') + '</div></div>';
   }
@@ -437,12 +455,60 @@
     var sorted = r.scores.slice().sort(function (a, b) { return a.total - b.total; });
     var rows = sorted.map(function (s) {
       var win = r.winners.indexOf(s.id) !== -1;
-      return '<tr class="' + (win ? 'winner' : '') + '"><td>' + esc(s.name) + (s.calledCabo ? ' <span class="tag accent">cabo</span>' : '') + (win ? ' <span class="tag">winner</span>' : '') + '</td>' +
+      return '<tr class="' + (win ? 'winner' : '') + '"><td>' + esc(s.name) + (s.calledCabo ? ' <span class="tag accent">cabo</span>' : '') + (win ? ' <span class="tag ok">winner</span>' : '') + '</td>' +
         '<td><div class="hand">' + s.cards.map(function (c) { return cardFaceHTML(c, '', 'disabled'); }).join('') + '</div></td>' +
         '<td class="mono">' + s.total + '</td></tr>';
     }).join('');
-    return '<div class="results"><h2>Results</h2><table><thead><tr><th>Player</th><th>Hand</th><th>Total</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    var buttons = isHost()
+      ? '<button class="btn primary" data-action="start">Play again</button><button class="btn" data-action="endGame">Back to lobby</button>'
+      : '<span class="hint">Waiting for the host to start another game.</span>';
+    return '<div class="modal"><div class="results"><h2>Results</h2><p>' + esc(r.reason) + '</p>' +
+      '<table><thead><tr><th>Player</th><th>Hand</th><th>Total</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="buttons">' + buttons + '</div></div></div>';
   }
+
+  // Place opponents evenly around the table. I sit at the bottom (90°); the
+  // rest are spread around the remaining arc and rotated to face their seat.
+  function layoutScene() {
+    var scene = document.getElementById('scene');
+    if (!scene) return;
+    var W = scene.clientWidth, H = scene.clientHeight;
+    var dock = scene.querySelector('.dock');
+    var dockH = dock ? dock.offsetHeight : 0;
+    var cx = W / 2, cy = H * 0.42;
+    var rx = W * 0.40, ry = Math.max(120, (H - dockH) * 0.5);
+
+    var felt = document.getElementById('felt');
+    if (felt) {
+      felt.style.width = (rx * 2.6) + 'px';
+      felt.style.height = (ry * 2.9) + 'px';
+      felt.style.left = cx + 'px';
+      felt.style.top = cy + 'px';
+    }
+
+    var seats = scene.querySelectorAll('.seat.opp');
+    for (var i = 0; i < seats.length; i++) {
+      var seat = seats[i];
+      var a = parseFloat(seat.getAttribute('data-angle')) * Math.PI / 180;
+      var x = cx + rx * Math.cos(a);
+      var y = cy + ry * Math.sin(a);
+      var r = Math.max(seat.offsetWidth, seat.offsetHeight) / 2;
+      x = Math.min(Math.max(x, r + 8), W - r - 8);
+      y = Math.min(Math.max(y, r + 8), H - dockH - r - 8);
+      seat.style.left = x + 'px';
+      seat.style.top = y + 'px';
+      // Keep the name tag clear of the cards whatever the seat's rotation.
+      var label = seat.querySelector('.label');
+      if (label) {
+        var rot = parseFloat(seat.getAttribute('data-angle')) - 90;
+        var rad = rot * Math.PI / 180;
+        var reach = Math.abs(Math.sin(rad)) * label.offsetWidth / 2 + Math.abs(Math.cos(rad)) * label.offsetHeight / 2;
+        label.style.top = -(reach + 12) + 'px';
+      }
+    }
+  }
+
+  window.addEventListener('resize', layoutScene);
 
   // ───────────────────────── interactions ─────────────────────────
 
@@ -465,7 +531,8 @@
     if (kind === 'create') {
       send({ type: 'create', name: name });
     } else {
-      var code = (document.getElementById('code').value || '').trim().toUpperCase();
+      var codeEl = document.getElementById('code');
+      var code = (codeEl ? codeEl.value : S.inviteCode).trim().toUpperCase();
       if (code.length < 4) { toast('Enter the join code.', true); return; }
       send({ type: 'join', code: code, name: name });
     }
@@ -475,13 +542,7 @@
     var action = btn.getAttribute('data-action');
     var ownerId = btn.getAttribute('data-owner');
     var cardId = btn.getAttribute('data-card');
-    var g = S.game;
     switch (action) {
-      case 'snap':
-        S.snapMode = false;
-        send({ type: 'snap', ownerId: ownerId, cardId: cardId });
-        render();
-        break;
       case 'give':
         send({ type: 'give', cardId: cardId });
         break;
@@ -533,7 +594,7 @@
       case 'kick': send({ type: 'kick', playerId: btn.getAttribute('data-player') }); break;
       case 'start': send({ type: 'start' }); break;
       case 'endGame': send({ type: 'endGame' }); break;
-      case 'ready': clearReveals(); send({ type: 'ready' }); break;
+      case 'ready': if (S.game && S.game.status === 'peek') clearReveals(); send({ type: 'ready' }); break;
       case 'draw': send({ type: 'draw' }); break;
       case 'discardHeld': send({ type: 'discardHeld' }); break;
       case 'cabo':
@@ -541,9 +602,17 @@
         break;
       case 'skipPower': S.sel = { mine: null, theirs: null }; send({ type: 'skipPower' }); break;
       case 'confirmSwap': send({ type: 'confirmSwap', swap: btn.getAttribute('data-swap') === '1' }); break;
-      case 'snapMode': S.snapMode = !S.snapMode; render(); break;
+      case 'toggleLog': S.logOpen = !S.logOpen; render(); break;
       case 'hideReveals': clearReveals(); render(); break;
     }
+  });
+
+  // Double-click (or double-tap) any card during the match window to claim it matches the pile.
+  app.addEventListener('dblclick', function (ev) {
+    var card = ev.target.closest('.card[data-owner]');
+    if (!card || !canMatch()) return;
+    ev.preventDefault();
+    send({ type: 'snap', ownerId: card.getAttribute('data-owner'), cardId: card.getAttribute('data-card') });
   });
 
   app.addEventListener('input', function (ev) {
@@ -556,12 +625,8 @@
 
   app.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Enter') return;
-    if (ev.target.id === 'name') doCreateOrJoin(document.getElementById('code').value.trim() ? 'join' : 'create');
+    if (ev.target.id === 'name') doCreateOrJoin((S.inviteCode || (document.getElementById('code') || {}).value) ? 'join' : 'create');
     if (ev.target.id === 'code') doCreateOrJoin('join');
-  });
-
-  document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && S.snapMode) { S.snapMode = false; render(); }
   });
 
   render();

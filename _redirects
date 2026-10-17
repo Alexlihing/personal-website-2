@@ -1,8 +1,9 @@
 # Private Cabo game: the page and its assets are proxied from the Render server,
-# so https://alex-li.com/secret-cabo keeps working without a server on Netlify.
-/secret-cabo      /secret-cabo/                                        301
-/secret-cabo/     https://cabo-3eqa.onrender.com/secret-cabo/index.html 200
-/secret-cabo/*    https://cabo-3eqa.onrender.com/secret-cabo/:splat    200
+# so https://alex-li.com/secret-cabo works without a server on Netlify.
+# Netlify treats /secret-cabo and /secret-cabo/ as the same path, so the page
+# uses absolute asset URLs and no trailing-slash redirect is needed.
+/secret-cabo      https://cabo-3eqa.onrender.com/secret-cabo/index.html  200
+/secret-cabo/*    https://cabo-3eqa.onrender.com/secret-cabo/:splat      200
 
 # The server source folder is in this repo; never publish it through the site.
-/cabo/*           /404.html                                            404!
+/cabo/*           /404.html                                              404!

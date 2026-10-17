@@ -55,10 +55,11 @@ function client(token) {
   assert.equal(b.state.game.held.card, undefined, 'held card hidden from others');
   a.send({ type: 'discardHeld' });
   await a.wait((c) => c.state.game.phase !== 'hold');
-  if (a.state.game.phase === 'power') { a.send({ type: 'skipPower' }); await a.wait((c) => c.state.game.phase === 'draw'); }
-  assert.equal(a.state.game.turnPlayerId, b.state.me);
+  if (a.state.game.phase === 'power') { a.send({ type: 'skipPower' }); await a.wait((c) => c.state.game.phase === 'settle'); }
+  assert.equal(a.state.game.phase, 'settle');
+  assert.equal(a.state.game.turnPlayerId, a.state.me, 'turn waits for everyone to be ready');
 
-  // Bob drops and comes back on a new socket with the same token.
+  // Bob drops and comes back on a new socket with the same token, mid settle window.
   b.ws.close();
   await a.wait((c) => !c.state.lobby.players[1].connected);
   const b2 = await client('smoke-token-bob');
@@ -67,12 +68,14 @@ function client(token) {
   await b2.wait((c) => c.state && c.state.game);
   assert.equal(b2.state.me, a.state.lobby.players[1].id);
   assert.ok(a.state.lobby.players[1].connected);
+  assert.equal(b2.state.game.phase, 'settle');
 
   // Bob attempts a match on Ann's first card.
   const target = b2.state.game.players[0].cards[0];
   const before = b2.state.game.players[0].cardCount;
+  const revealsBefore = a.reveals.length;
   b2.send({ type: 'snap', ownerId: a.state.me, cardId: target.id });
-  await b2.wait((c) => c.state.game.log.some((e) => /match/.test(e.text)));
+  await b2.wait((c) => c.state.game.log.some((e) => /matches|guessed wrong/.test(e.text)));
   const g = b2.state.game;
   if (g.pendingGive) {
     assert.equal(g.players[0].cardCount, before - 1);
@@ -81,8 +84,12 @@ function client(token) {
     assert.equal(b2.state.game.players[0].cardCount, before);
   } else {
     assert.equal(g.players[1].cardCount, 4, 'penalty card drawn');
-    assert.ok(a.reveals.some((r) => r.cards[0].id === target.id), 'wrong guess revealed to everyone');
+    assert.equal(a.reveals.length, revealsBefore, 'wrong guess reveals nothing');
   }
+
+  a.send({ type: 'ready' }); b2.send({ type: 'ready' });
+  await a.wait((c) => c.state.game.phase === 'draw');
+  assert.equal(a.state.game.turnPlayerId, b2.state.me);
 
   a.send({ type: 'endGame' });
   await b2.wait((c) => c.state.game === null);

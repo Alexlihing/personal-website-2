@@ -66,21 +66,27 @@ of some hosts sleep after inactivity, which does the same.
 - Standard 52-card deck, cryptographically shuffled each game. Ace = 1,
   2–10 = face value, J/Q/K = 10, King of hearts = −1. Lowest total wins.
 - Each player is dealt the lobby's hand size (default 4, the only lobby
-  setting) and peeks at their first two cards before the first turn.
-- On your turn: draw from the deck, then discard the drawn card or swap it
-  with one of yours. **The card that lands on the discard pile is the card you
-  played**, so a swapped-out 7 triggers a peek just like a discarded 7.
+  setting), laid out two cards per row, and peeks at their bottom row before
+  the first turn. The played pile starts empty.
+- On your turn: draw from the deck, then play the drawn card or swap it with
+  one of yours (the swapped-out card is what you play). **The card that lands
+  on the played pile is the card you played**, so a swapped-out 7 triggers a
+  peek just like a played 7.
 - Powers (all optional): 7/8 peek at one of your cards, 9/10 peek at an
   opponent's card, J blind swap (the server refuses any card you have ever
   seen, tracked per physical card even after it moves), Q look at one of yours
   and one of theirs, then swap or keep.
-- Matching: at any time, anyone may claim a face-down card matches the rank on
-  top of the discard pile. Correct and it's yours: the card is gone. Correct
-  and it's someone else's: it's gone and you give them one of your cards.
-  Wrong: everyone sees the card and you draw a penalty card.
+- After every play there is a match window: anyone may double-click any
+  face-down card they believe matches the rank on top of the pile. Correct and
+  it's yours: the card is gone. Correct and it's someone else's: it's gone and
+  you give them one of your cards. Wrong: nothing is revealed and you draw a
+  penalty card. The next player draws once every player has pressed Ready.
 - The game ends when a player has no cards, or one full round after someone
   calls Cabo (calling Cabo uses your turn).
 - Peeked cards are shown for 10 seconds, then hidden again. Remembering them is
   part of the game.
+- The table view seats players evenly around the table with their cards
+  turned toward them; you sit at the bottom.
 - Refreshing the page or dropping the connection keeps your seat; the browser
-  remembers the lobby and rejoins automatically.
+  remembers the lobby and rejoins automatically. Opening an invite link shows
+  only a name prompt with the join code filled in.
