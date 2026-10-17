@@ -35,7 +35,10 @@ app.use('/secret-cabo', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   next();
 });
-app.use('/secret-cabo', express.static(path.join(__dirname, 'public')));
+// Serve the page at /secret-cabo with or without a trailing slash and never
+// redirect: proxies in front of this server (Netlify) strip the slash.
+app.get('/secret-cabo', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.use('/secret-cabo', express.static(path.join(__dirname, 'public'), { redirect: false }));
 
 if (SERVE_SITE) {
   // Never expose this folder (server source, node_modules) through the site.
