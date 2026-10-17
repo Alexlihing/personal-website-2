@@ -96,11 +96,38 @@ h2 { font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercas
 
 /* ── the table ── */
 .scene { position: relative; flex: 1; min-height: calc(100vh - var(--topbar-h)); overflow: hidden; }
+.table3d { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; }
 .felt {
   position: absolute; left: 50%; top: 42%; width: 120vw; height: 120vh; transform: translate(-50%, -50%);
   background: radial-gradient(ellipse at 50% 40%, #dbeaf6 0%, var(--felt) 55%, #bfd6ea 100%);
   border: 14px solid var(--felt-rim); border-radius: 50%; box-shadow: inset 0 0 60px rgba(40, 70, 110, 0.18);
 }
+
+/* ── 3D table: remove the `three-d` class on .scene to go back to the flat view ── */
+.scene.three-d { background: radial-gradient(ellipse at 50% 20%, #243447 0%, #141d29 60%, #0c1219 100%); }
+.scene.three-d .table3d {
+  height: 128%; transform-origin: 50% 100%; transform: perspective(1900px) rotateX(27deg); transform-style: preserve-3d;
+}
+.scene.three-d .seat.opp { --card-w: 82px; --card-h: 114px; }
+.scene.three-d .center { --card-w: 92px; --card-h: 128px; gap: 2rem; top: 45%; }
+.scene.three-d .seat .label { font-size: 1rem; padding: 0.3rem 0.9rem; }
+.scene.three-d .pile .plabel { font-size: 0.72rem; }
+.scene.three-d .felt {
+  background: radial-gradient(ellipse at 50% 38%, #3b8a63 0%, #2a6b4b 50%, #1d4f37 100%);
+  border: 22px solid #5b3a21; border-radius: 50%;
+  box-shadow: inset 0 0 90px rgba(0,0,0,0.45), 0 40px 80px rgba(0,0,0,0.6), 0 0 0 6px #3b2515;
+  background-clip: padding-box;
+}
+.scene.three-d .felt::before {
+  content: ''; position: absolute; inset: -22px; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(0,0,0,0) 35%, rgba(0,0,0,0.25) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 22px), #000 calc(100% - 22px)); mask: radial-gradient(farthest-side, transparent calc(100% - 22px), #000 calc(100% - 22px));
+}
+.scene.three-d .card { box-shadow: 0 6px 10px rgba(0,0,0,0.35); }
+.scene.three-d .seat .label { background: rgba(255,255,255,0.95); }
+.scene.three-d .pile .plabel { background: rgba(0,0,0,0.35); color: #e8f1ea; }
+.scene.three-d .pile .empty { border-color: rgba(255,255,255,0.45); }
+.scene.three-d .seat .grid:empty { border-color: rgba(255,255,255,0.35); }
 
 .seat { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; --rot: 0deg; }
 .seat.opp { transform: translate(-50%, -50%) rotate(var(--rot)); --card-w: 64px; --card-h: 90px; }
@@ -122,7 +149,7 @@ h2 { font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercas
 
 .center { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; align-items: flex-start; gap: 1.5rem; --card-w: 70px; --card-h: 98px; }
 .pile { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
-.pile .plabel { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #4e6377; background: rgba(255,255,255,0.6); padding: 0.1rem 0.5rem; border-radius: 4px; }
+.pile .plabel { white-space: nowrap; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #4e6377; background: rgba(255,255,255,0.6); padding: 0.1rem 0.5rem; border-radius: 4px; }
 .pile .empty { width: var(--card-w); height: var(--card-h); border: 2px dashed rgba(60,90,130,0.35); border-radius: 8px; }
 
 /* ── cards ── */
@@ -140,7 +167,9 @@ h2 { font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercas
 .card .val { position: absolute; bottom: 4px; right: 6px; font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); }
 .card.red { color: #c0392b; }
 .card.revealed { border-color: #e0b24a; box-shadow: 0 0 0 3px #fff3d6, 0 6px 14px rgba(0,0,0,0.15); }
-.card.clickable { cursor: pointer; }
+.card.clickable, .empty.clickable { cursor: pointer; }
+.drop { outline: 3px dashed #ffd36a; outline-offset: 4px; }
+.drop:hover { transform: translateY(-4px); }
 .card.clickable:hover { transform: translateY(-4px); box-shadow: 0 6px 14px rgba(0,0,0,0.18); }
 .card.matchable { cursor: pointer; }
 .card.selected { outline: 3px solid var(--accent); outline-offset: 2px; transform: translateY(-4px); }
@@ -152,7 +181,7 @@ h2 { font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercas
 .dock { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 0 1rem 1rem; pointer-events: none; }
 .dock > * { pointer-events: auto; }
 .actions {
-  background: rgba(255,255,255,0.96); border: 1px solid var(--border); border-radius: 12px; padding: 0.7rem 1rem;
+  background: rgba(255,255,255,0.96); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem 0.9rem;
   display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; max-width: 760px; width: 100%; box-shadow: 0 6px 20px rgba(30,50,90,0.1);
 }
 .actions .prompt { flex: 1; min-width: 200px; font-size: 0.95rem; }
@@ -192,7 +221,8 @@ h2 { font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercas
   .log-panel { left: 50%; transform: translateX(-50%); bottom: auto; top: 10px; width: min(320px, 92vw); max-height: 30vh; }
 }
 @media (max-width: 600px) {
-  .seat.opp { --card-w: 48px; --card-h: 68px; }
+  .seat.opp, .scene.three-d .seat.opp { --card-w: 56px; --card-h: 78px; }
+  .scene.three-d .center { --card-w: 64px; --card-h: 90px; gap: 1rem; }
   .seat.me { --card-w: 64px; --card-h: 90px; }
   .center { --card-w: 54px; --card-h: 76px; gap: 0.9rem; }
   .seat .label { font-size: 0.75rem; padding: 0.15rem 0.6rem; }

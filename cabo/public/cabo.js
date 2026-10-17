@@ -27,7 +27,7 @@
     me: null,
     game: null,
     reveals: {},          // "ownerId:cardId" → { rank, suit, value, timer }
-    revealNote: '',
+    peekCards: {},        // opening peek: "ownerId:cardId" → card, shown for 2s when clicked
     sel: { mine: null, theirs: null },
     logOpen: window.innerWidth > 900,
     ws: null,
@@ -35,7 +35,7 @@
   };
   store.set('cabo.token', S.token);
 
-  var REVEAL_MS = 10000;
+  var REVEAL_MS = 2000;
   var SUIT_CHAR = { S: '♠', H: '♥', D: '♦', C: '♣' };
 
   // ───────────────────────── websocket ─────────────────────────
@@ -128,25 +128,28 @@
   // ───────────────────────── reveals ─────────────────────────
 
   function addReveals(msg) {
-    S.revealNote = msg.reason || '';
-    msg.cards.forEach(function (c) {
-      var key = c.ownerId + ':' + c.id;
-      if (S.reveals[key] && S.reveals[key].timer) clearTimeout(S.reveals[key].timer);
-      var entry = { rank: c.rank, suit: c.suit, value: c.value, timer: null };
-      if (!msg.sticky) {
-        entry.timer = setTimeout(function () { delete S.reveals[key]; render(); }, REVEAL_MS);
-      }
-      S.reveals[key] = entry;
-    });
+    if (msg.sticky) {
+      // Opening peek: keep the cards face down until the player clicks one.
+      msg.cards.forEach(function (c) { S.peekCards[c.ownerId + ':' + c.id] = c; });
+      return;
+    }
+    msg.cards.forEach(showCard);
+  }
+
+  function showCard(c) {
+    var key = c.ownerId + ':' + c.id;
+    if (S.reveals[key] && S.reveals[key].timer) clearTimeout(S.reveals[key].timer);
+    S.reveals[key] = {
+      rank: c.rank, suit: c.suit, value: c.value,
+      timer: setTimeout(function () { delete S.reveals[key]; render(); }, REVEAL_MS),
+    };
   }
 
   function clearReveals() {
     Object.keys(S.reveals).forEach(function (k) { if (S.reveals[k].timer) clearTimeout(S.reveals[k].timer); });
     S.reveals = {};
-    S.revealNote = '';
+    S.peekCards = {};
   }
-
-  function hasReveals() { return Object.keys(S.reveals).length > 0; }
 
   // ───────────────────────── helpers ─────────────────────────
 
@@ -195,6 +198,7 @@
   // Which single-click action a given card currently has for me, if any.
   function cardAction(ownerId, card) {
     var g = S.game;
+    if (g && g.status === 'peek') return S.peekCards[ownerId + ':' + card.id] ? 'peekInitial' : null;
     if (!g || g.status !== 'playing') return null;
     if (g.pendingGive) {
       return (g.pendingGive.from === S.me && ownerId === S.me) ? 'give' : null;
@@ -327,12 +331,12 @@
     var opps = seatedOpponents();
     var n = g.players.length;
 
-    var html = '<div class="scene" id="scene"><div class="felt" id="felt"></div>';
+    var html = '<div class="scene three-d" id="scene"><div class="table3d" id="table3d"><div class="felt" id="felt"></div>';
     opps.forEach(function (p, i) {
       var angle = 90 + 360 * (i + 1) / n; // degrees, 90 = my seat at the bottom
       html += seatHTML(p, angle);
     });
-    html += centerHTML();
+    html += centerHTML() + '</div>';
     if (S.logOpen) {
       html += '<div class="log-panel"><h2>Log</h2><div class="log" id="log">' +
         g.log.map(function (e) { return '<div class="entry">' + esc(e.text) + '</div>'; }).join('') + '</div></div>';
@@ -366,7 +370,11 @@
     var deck = canDraw
       ? cardBackHTML('clickable', 'data-action="draw" title="Draw"')
       : cardBackHTML('', 'disabled');
-    var played = g.discardTop ? cardFaceHTML(g.discardTop, '', 'disabled') : '<div class="empty"></div>';
+    var canPlay = g.status === 'playing' && myTurn && g.phase === 'hold';
+    var playAttrs = canPlay ? 'data-action="discardHeld" title="Play the drawn card here"' : '';
+    var played = g.discardTop
+      ? cardFaceHTML(g.discardTop, canPlay ? 'clickable drop' : '', canPlay ? playAttrs : 'disabled')
+      : '<div class="empty' + (canPlay ? ' clickable drop' : '') + '" ' + playAttrs + '></div>';
     var held = '';
     if (g.held) {
       held = '<div class="pile"><span class="plabel">' + (myTurn ? 'Drawn' : esc(nameOf(g.turnPlayerId)) + ' drew') + '</span>' +
@@ -387,15 +395,11 @@
     var me = playerById(S.me);
     var notReady = g.players.filter(function (p) { return !p.ready; }).map(function (p) { return p.name; });
 
-    if (hasReveals() && g.status !== 'peek') {
-      buttons.push('<button class="btn small" data-action="hideReveals">Hide revealed cards</button>');
-    }
-
     if (g.status === 'peek') {
       if (me && me.ready) {
-        prompt = 'Waiting for ' + esc(notReady.join(', ')) + ' to finish looking.';
+        prompt = 'Waiting for ' + esc(notReady.join(', ')) + '.';
       } else {
-        prompt = 'Memorize your bottom row, then press Ready.';
+        prompt = 'Peek at your bottom row.';
         buttons.push('<button class="btn primary" data-action="ready">Ready</button>');
       }
     } else if (g.status === 'finished') {
@@ -403,51 +407,43 @@
     } else if (g.pendingGive) {
       if (g.pendingGive.from === S.me) {
         alert = true;
-        prompt = 'You matched <strong>' + esc(nameOf(g.pendingGive.to)) + '</strong>\'s card. Click one of your cards to give them.';
+        prompt = 'Give <strong>' + esc(nameOf(g.pendingGive.to)) + '</strong> a card.';
       } else {
-        prompt = 'Waiting for ' + esc(nameOf(g.pendingGive.from)) + ' to give ' + esc(nameOf(g.pendingGive.to)) + ' a card.';
+        prompt = esc(nameOf(g.pendingGive.from)) + ' is giving ' + esc(nameOf(g.pendingGive.to)) + ' a card.';
       }
     } else if (g.phase === 'settle') {
       if (me && me.ready) {
-        prompt = 'Waiting for ' + esc(notReady.join(', ')) + ' to be ready.';
+        prompt = 'Waiting for ' + esc(notReady.join(', ')) + '.';
       } else {
         alert = true;
-        prompt = 'A <strong>' + esc(g.discardTop.rank) + '</strong> is on the pile. Double-click any card you think matches it, then press Ready.';
+        prompt = 'Match the <strong>' + esc(g.discardTop.rank) + '</strong>?';
         buttons.push('<button class="btn primary" data-action="ready">Ready</button>');
       }
     } else if (!myTurn) {
-      var who = esc(nameOf(g.turnPlayerId));
-      if (g.phase === 'draw') prompt = who + ' is drawing…';
-      else if (g.phase === 'hold') prompt = who + ' is deciding what to do with the drawn card…';
-      else prompt = who + ' may use the ' + esc(g.power.rank) + ' power…';
+      prompt = esc(nameOf(g.turnPlayerId)) + "'s turn.";
     } else if (g.phase === 'draw') {
-      prompt = '<strong>Your turn.</strong> Draw a card' + (g.caboCallerId ? '. This is your last turn.' : ', or call Cabo.');
+      prompt = '<strong>Your turn.</strong>';
       buttons.push('<button class="btn primary" data-action="draw">Draw</button>');
       if (!g.caboCallerId) buttons.push('<button class="btn danger" data-action="cabo">Call Cabo</button>');
     } else if (g.phase === 'hold') {
-      prompt = 'You drew a <strong>' + esc(cardLabel(g.held.card)) + '</strong>. Play it, or click one of your cards to swap it in.';
-      buttons.push('<button class="btn primary" data-action="discardHeld">Play it</button>');
+      prompt = 'Play it or swap it.';
     } else if (g.phase === 'power') {
       var t = g.power.type;
       if (g.power.stage === 'decide') {
         alert = true;
-        prompt = 'Both cards are revealed to you. Swap them?';
+        prompt = 'Swap?';
         buttons.push('<button class="btn primary" data-action="confirmSwap" data-swap="1">Swap</button>');
         buttons.push('<button class="btn" data-action="confirmSwap" data-swap="0">Keep</button>');
       } else {
-        prompt = '<strong>' + esc(g.power.rank) + ' power:</strong> ' + esc(g.power.label) + '. ';
-        if (t === 'peekOwn') prompt += 'Click one of your cards.';
-        else if (t === 'peekOther') prompt += 'Click an opponent\'s card.';
-        else {
-          prompt += (S.sel.mine ? 'Now pick an opponent\'s card.' : 'Pick one of your cards and one opponent card.');
-          if (t === 'blindSwap') prompt += ' Faded cards are ones you have already seen.';
-        }
+        if (t === 'peekOwn') prompt = 'Peek at one of your cards.';
+        else if (t === 'peekOther') prompt = "Peek at an opponent's card.";
+        else if (t === 'blindSwap') prompt = 'Blind swap.';
+        else prompt = 'Look and swap.';
         buttons.push('<button class="btn" data-action="skipPower">Skip</button>');
       }
     }
 
-    var note = (S.revealNote && hasReveals() && g.status !== 'peek') ? ' <span class="muted">(' + esc(S.revealNote) + ')</span>' : '';
-    return '<div class="actions' + (alert ? ' alert' : '') + '"><div class="prompt">' + prompt + note + '</div><div class="buttons">' + buttons.join('') + '</div></div>';
+    return '<div class="actions' + (alert ? ' alert' : '') + '"><div class="prompt">' + prompt + '</div><div class="buttons">' + buttons.join('') + '</div></div>';
   }
 
   function resultsHTML() {
@@ -472,11 +468,12 @@
   function layoutScene() {
     var scene = document.getElementById('scene');
     if (!scene) return;
-    var W = scene.clientWidth, H = scene.clientHeight;
+    var box = document.getElementById('table3d') || scene;
+    var W = box.clientWidth, H = box.clientHeight;
     var dock = scene.querySelector('.dock');
-    var dockH = dock ? dock.offsetHeight : 0;
-    var cx = W / 2, cy = H * 0.42;
-    var rx = W * 0.40, ry = Math.max(120, (H - dockH) * 0.5);
+    var dockH = dock ? dock.offsetHeight * 1.15 : 0;
+    var cx = W / 2, cy = H * 0.45;
+    var rx = W * 0.40, ry = Math.max(120, (H - dockH) * 0.46);
 
     var felt = document.getElementById('felt');
     if (felt) {
@@ -493,8 +490,9 @@
       var x = cx + rx * Math.cos(a);
       var y = cy + ry * Math.sin(a);
       var r = Math.max(seat.offsetWidth, seat.offsetHeight) / 2;
+      var topPad = scene.classList.contains('three-d') ? 40 : 8; // keep seats inside the far rim
       x = Math.min(Math.max(x, r + 8), W - r - 8);
-      y = Math.min(Math.max(y, r + 8), H - dockH - r - 8);
+      y = Math.min(Math.max(y, r + topPad), H - dockH - r - 8);
       seat.style.left = x + 'px';
       seat.style.top = y + 'px';
       // Keep the name tag clear of the cards whatever the seat's rotation.
@@ -543,6 +541,10 @@
     var ownerId = btn.getAttribute('data-owner');
     var cardId = btn.getAttribute('data-card');
     switch (action) {
+      case 'peekInitial':
+        showCard(S.peekCards[ownerId + ':' + cardId]);
+        render();
+        break;
       case 'give':
         send({ type: 'give', cardId: cardId });
         break;
@@ -578,7 +580,7 @@
   app.addEventListener('click', function (ev) {
     var btn = ev.target.closest('[data-action]');
     if (!btn || btn.disabled) return;
-    if (btn.classList.contains('card')) return cardClick(btn);
+    if (btn.hasAttribute('data-owner')) return cardClick(btn);
     var action = btn.getAttribute('data-action');
     switch (action) {
       case 'create': case 'join': doCreateOrJoin(action); break;
@@ -603,7 +605,6 @@
       case 'skipPower': S.sel = { mine: null, theirs: null }; send({ type: 'skipPower' }); break;
       case 'confirmSwap': send({ type: 'confirmSwap', swap: btn.getAttribute('data-swap') === '1' }); break;
       case 'toggleLog': S.logOpen = !S.logOpen; render(); break;
-      case 'hideReveals': clearReveals(); render(); break;
     }
   });
 
