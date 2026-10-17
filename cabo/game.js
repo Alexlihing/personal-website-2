@@ -160,9 +160,10 @@ class Game {
 
   _beginPlay() {
     this.status = 'playing';
-    this.turn = 0;
+    // Random starting player (tests may pin it with settings.firstTurn).
+    this.turn = Number.isInteger(this.settings.firstTurn) ? this.settings.firstTurn : crypto.randomInt(this.players.length);
     this.phase = 'draw';
-    this._log(`Game on. ${this._current().name} goes first.`);
+    this._log(`Game on. ${this._current().name} was drawn to go first.`);
   }
 
   _checkEmptyHands() {

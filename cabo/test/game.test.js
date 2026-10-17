@@ -10,7 +10,7 @@ function test(name, fn) {
 const throwsMsg = (fn, re) => assert.throws(fn, (e) => re.test(e.message) || (() => { throw new Error('unexpected: ' + e.message); })());
 
 const P = [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }, { id: 'c', name: 'Cat' }];
-const SETTINGS = { handSize: 4 };
+const SETTINGS = { handSize: 4, firstTurn: 0 };
 const mk = (s = {}) => new Game(P, { ...SETTINGS, ...s });
 const cur = (g) => g.players[g.turn];
 const readyAll = (g) => g.players.forEach((p) => g.ready(p.id));
@@ -82,6 +82,15 @@ test('deal: no starting card on the pile, bottom row peeked, ready gate', () => 
   g.ready('c');
   assert.equal(g.status, 'playing');
   assert.equal(cur(g).id, 'a');
+});
+
+test('starting player is random', () => {
+  const seen = new Set();
+  for (let i = 0; i < 60 && seen.size < 3; i++) {
+    const g = new Game(P, { handSize: 4 }); readyAll(g);
+    seen.add(cur(g).id);
+  }
+  assert.equal(seen.size, 3);
 });
 
 test('initial peek is two cards, capped by hand size', () => {
@@ -324,7 +333,7 @@ test('draw pile reshuffles from the played pile when empty', () => {
 });
 
 test('power is skipped automatically when it cannot be used', () => {
-  const g = new Game(P.slice(0, 2), { handSize: 1 });
+  const g = new Game(P.slice(0, 2), { handSize: 1, firstTurn: 0 });
   readyAll(g);
   g.players[1].hand = [];
   rig(g, '9');
