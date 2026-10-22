@@ -22,7 +22,7 @@ function client(token) {
   c.send = (m) => ws.send(JSON.stringify(m));
   c.wait = (pred, ms = 3000) => new Promise((res, rej) => {
     const t0 = Date.now();
-    (function poll() { if (pred(c)) return res(); if (Date.now() - t0 > ms) return rej(new Error('timed out waiting for: ' + pred.toString() + '\n  last log: ' + JSON.stringify(c.state && c.state.game && c.state.game.log.slice(-2).map((e) => e.text)) + ' errors: ' + JSON.stringify(c.errors))); setTimeout(poll, 15); })();
+    (function poll() { if (pred(c)) return res(); if (Date.now() - t0 > ms) return rej(new Error('timed out waiting for: ' + pred.toString() + '\n  last moves: ' + JSON.stringify(c.state && c.state.game && c.state.game.moves.slice(-2).map((m) => m.text)) + ' errors: ' + JSON.stringify(c.errors))); setTimeout(poll, 15); })();
   });
   return new Promise((res, rej) => { ws.on('open', () => { c.send({ type: 'hello', token }); res(c); }); ws.on('error', rej); });
 }
@@ -86,7 +86,7 @@ function client(token) {
   const before = w2.state.game.players[actorIdx].cardCount;
   const revealsBefore = actor.reveals.length;
   w2.send({ type: 'snap', ownerId: actor.state.me, cardId: target.id });
-  await w2.wait((c) => c.state.game.log.some((e) => /matches|guessed wrong/.test(e.text)));
+  await w2.wait((c) => c.state.game.moves.some((m) => m.type === 'match' || m.type === 'penalty'));
   const g = w2.state.game;
   if (g.pendingGive) {
     assert.equal(g.players[actorIdx].cardCount, before - 1);

@@ -15,6 +15,9 @@ const mk = (s = {}) => new Game(P, { ...SETTINGS, ...s });
 const cur = (g) => g.players[g.turn];
 const readyAll = (g) => g.players.forEach((p) => g.ready(p.id));
 const top = (g) => g.discard[g.discard.length - 1];
+const count = (p) => p.hand.filter(Boolean).length;
+const total = (p) => p.hand.filter(Boolean).reduce((s, c) => s + c.value, 0);
+const lastMove = (g) => g.moves[g.moves.length - 1];
 
 // Take a card matching pred out of wherever it is (deck or a hand). A hand slot
 // is refilled from the deck so hand sizes stay the same.
@@ -22,7 +25,7 @@ function pull(g, pred) {
   const i = g.deck.findIndex(pred);
   if (i >= 0) return g.deck.splice(i, 1)[0];
   for (const p of g.players) {
-    const j = p.hand.findIndex(pred);
+    const j = p.hand.findIndex((c) => c && pred(c));
     if (j >= 0) { const c = p.hand[j]; p.hand[j] = g.deck.shift(); return c; }
   }
   throw new Error('no such card anywhere');
@@ -250,8 +253,10 @@ test('matching: own card leaves the hand; wrong guess stays hidden and costs a p
   const seenBefore = wrongCard.seenBy.slice();
 
   g.snap('c', 'c', wrongCard.id);
-  assert.equal(g.players[2].hand.length, 5);
+  assert.equal(count(g.players[2]), 5);
   assert.equal(g.deck.length, deckBefore - 1);
+  assert.equal(lastMove(g).type, 'penalty');
+  assert.deepEqual(lastMove(g).cards, [{ ownerId: 'c', cardId: g.players[2].hand[4].id }]);
   assert.deepEqual(wrongCard.seenBy, seenBefore, 'wrong guess reveals nothing');
   assert.equal(g.reveals.length, revealsBefore);
   assert.match(g.log[g.log.length - 1].text, /guessed wrong/);
@@ -260,11 +265,14 @@ test('matching: own card leaves the hand; wrong guess stays hidden and costs a p
   const annCard = g.players[0].hand.find((c) => c.rank !== top(g).rank);
   g.snap('b', 'a', annCard.id);
   assert.equal(g.reveals.length, revealsBefore);
-  assert.equal(g.players[1].hand.length, 5);
+  assert.equal(count(g.players[1]), 5);
 
   g.ready('a');
   g.snap('b', 'b', match.id);
-  assert.equal(g.players[1].hand.length, 4);
+  assert.equal(count(g.players[1]), 4);
+  assert.equal(g.players[1].hand[2], null, 'the matched card leaves its slot empty');
+  assert.equal(g.players[1].hand.length, 5, 'other cards keep their slots');
+  assert.deepEqual(lastMove(g), { ...lastMove(g), type: 'match', actorId: 'b', cards: [{ ownerId: 'b', slot: 2 }] });
   assert.equal(top(g), match);
   assert.equal(g.pendingGive, null);
   assert.ok(g.players.every((p) => !p.ready), 'a successful match resets readiness');
@@ -281,10 +289,12 @@ test("matching someone else's card gives them one of yours; ready waits for the 
   const gift = g.players[2].hand[3]; // bottom row, so Cat has seen it
   g.give('c', gift.id);
   assert.equal(g.pendingGive, null);
-  assert.equal(g.players[2].hand.length, 3);
-  assert.equal(g.players[1].hand.length, 4);
-  assert.equal(g.players[1].hand[3], gift);
+  assert.equal(count(g.players[2]), 3);
+  assert.equal(g.players[2].hand[3], null, 'giving a card leaves the slot empty');
+  assert.equal(count(g.players[1]), 4);
+  assert.equal(g.players[1].hand[2], gift, 'the received card fills the empty slot');
   assert.ok(gift.seenBy.includes('c'));
+  assert.deepEqual(lastMove(g).cards, [{ ownerId: 'b', cardId: gift.id }]);
   readyAll(g);
   assert.equal(cur(g).id, 'b');
   g.draw('b');
@@ -314,22 +324,67 @@ test('cabo gives everyone else one turn, then ends', () => {
   assert.equal(g.status, 'playing', 'last play still gets a settle window');
   readyAll(g);
   assert.equal(g.status, 'finished');
-  const expected = g.players.map((p) => p.hand.reduce((s, c) => s + c.value, 0));
+  const expected = g.players.map(total);
   assert.deepEqual(g.result.scores.map((s) => s.total), expected);
   const min = Math.min(...expected);
   assert.deepEqual(g.result.winners, g.players.filter((p, i) => expected[i] === min).map((p) => p.id));
   assert.ok(g.viewFor('b').players[0].cards.every((c) => c.known));
 });
 
-test('draw pile reshuffles from the played pile when empty', () => {
+test('every card is used once: the game ends when the draw pile runs out', () => {
   const g = mk(); readyAll(g);
-  g.discard.push(...g.deck.splice(0));
+  g.deck.splice(0, g.deck.length - 1); // one card left
+  playThrough(g);
   assert.equal(g.deck.length, 0);
-  const t = top(g);
+  assert.equal(g.status, 'playing', 'the last card still gets its settle window');
+  readyAll(g);
+  assert.equal(g.status, 'finished');
+  assert.match(g.result.reason, /draw pile is empty/);
+
+  const h = mk(); readyAll(h);
+  h.deck.length = 0;
+  h.draw('a');
+  assert.equal(h.status, 'finished');
+});
+
+test('a wrong match with an empty deck costs nothing', () => {
+  const g = mk(); readyAll(g);
+  g.deck.splice(0, g.deck.length - 1);
+  playThrough(g);
+  const wrong = g.players[1].hand.find((c) => c.rank !== top(g).rank);
+  g.snap('b', 'b', wrong.id);
+  assert.equal(count(g.players[1]), 4);
+  assert.equal(lastMove(g).type, 'penalty');
+  assert.deepEqual(lastMove(g).cards, []);
+});
+
+test('move feed names the slots a power touched', () => {
+  const g = mk(); readyAll(g);
+  rig(g, 'Q');
   g.draw('a');
-  assert.ok(g.held.card);
-  assert.deepEqual(g.discard, [t]);
-  assert.equal(g.deck.length, 52 - 12 - 1 - 1);
+  assert.equal(lastMove(g).type, 'draw');
+  g.discardHeld('a');
+  assert.equal(lastMove(g).type, 'play');
+  const mine = g.players[0].hand[0], theirs = g.players[1].hand[1];
+  g.usePower('a', { myCardId: mine.id, playerId: 'b', theirCardId: theirs.id });
+  assert.equal(lastMove(g).type, 'look');
+  assert.deepEqual(lastMove(g).cards, [{ ownerId: 'a', cardId: mine.id }, { ownerId: 'b', cardId: theirs.id }]);
+  g.confirmSwap('a', true);
+  assert.equal(lastMove(g).type, 'swap');
+  assert.deepEqual(lastMove(g).cards, [{ ownerId: 'a', cardId: theirs.id }, { ownerId: 'b', cardId: mine.id }], 'slots as they are after the swap');
+  const view = g.viewFor('c');
+  assert.equal(view.log, undefined);
+  assert.equal(view.moves[view.moves.length - 1].seq, g.seq);
+  assert.ok(view.moves.every((m, i, arr) => i === 0 || m.seq > arr[i - 1].seq));
+
+  readyAll(g);
+  g.draw('b');
+  const slot = g.players[1].hand[3];
+  const held = g.held.card;
+  g.swapHeld('b', slot.id);
+  assert.equal(lastMove(g).type, 'place');
+  assert.deepEqual(lastMove(g).cards, [{ ownerId: 'b', cardId: held.id }]);
+  assert.equal(g.players[1].hand[3], held, 'the drawn card takes the exact slot');
 });
 
 test('power is skipped automatically when it cannot be used', () => {

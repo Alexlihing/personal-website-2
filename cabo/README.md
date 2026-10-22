@@ -68,25 +68,51 @@ of some hosts sleep after inactivity, which does the same.
 - Each player is dealt the lobby's hand size (default 4, the only lobby
   setting), laid out two cards per row, and peeks at their bottom row before
   the first turn. The played pile starts empty.
-- On your turn: draw from the deck, then play the drawn card or swap it with
-  one of yours (the swapped-out card is what you play). **The card that lands
-  on the played pile is the card you played**, so a swapped-out 7 triggers a
-  peek just like a played 7.
+- Hands are fixed slots. A card that leaves a hand (matched or given away)
+  leaves an empty slot behind; a card that arrives fills the first empty slot.
+  Nothing shuffles around, so you can keep track of what sits where.
+- On your turn: draw from the deck, then drag the drawn card onto the played
+  pile to play it, or onto one of your cards to swap (the swapped-out card is
+  what you play). **The card that lands on the played pile is the card you
+  played**, so a swapped-out 7 triggers a peek just like a played 7.
+- Every card is used exactly once: the played pile is never reshuffled. When
+  the draw pile runs out, the game ends after that turn's match window.
 - Powers (all optional): 7/8 peek at one of your cards, 9/10 peek at an
   opponent's card, J blind swap (the server refuses any card you have ever
   seen, tracked per physical card even after it moves), Q look at one of yours
   and one of theirs, then swap or keep.
-- After every play there is a match window: anyone may double-click any
-  face-down card they believe matches the rank on top of the pile. Correct and
+- After every play there is a match window: anyone may drag any face-down
+  card they believe matches the rank on top of the pile onto the played pile. Correct and
   it's yours: the card is gone. Correct and it's someone else's: it's gone and
   you give them one of your cards. Wrong: nothing is revealed and you draw a
   penalty card. The next player draws once every player has pressed Ready.
 - The game ends when a player has no cards, or one full round after someone
   calls Cabo (calling Cabo uses your turn).
-- Peeked cards are shown for 10 seconds, then hidden again. Remembering them is
+- Peeked cards are shown for 2 seconds, then hidden again. Remembering them is
   part of the game.
-- The table view seats players evenly around the table with their cards
-  turned toward them; you sit at the bottom.
+- Every move is shown on the cards it touched, for everyone: a label such as
+  "Bob looked", "Bob placed", "Cat matched", "from Cat" or "penalty" sits on
+  the slot for a few seconds, with a short animation. There is no text log;
+  the prompt bar shows the latest move in one line.
+- Layout: opponents sit across the top of the table, you sit at the bottom,
+  and the draw pile, played pile and drawn card live in a column on the right
+  (below the table on phones).
+
+## Controls
+
+| Key            | Action                                               |
+|----------------|------------------------------------------------------|
+| `D`            | Draw                                                 |
+| `Space` / `P`  | Play the drawn card                                  |
+| `1`–`9`        | Your card in that slot (swap, peek, select, or give) |
+| `Enter` / `R`  | Ready                                                |
+| `S`            | Skip the power                                       |
+| `Y` / `N`      | Swap / keep after a Queen look                       |
+| `C`            | Call Cabo                                            |
+| `Esc`          | Clear a selection or cancel a drag                   |
+
+Dragging works with a mouse or a finger. Clicking still works where it is
+unambiguous (a card to swap or peek, the played pile to play the drawn card).
 - Refreshing the page or dropping the connection keeps your seat; the browser
   remembers the lobby and rejoins automatically. Opening an invite link shows
   only a name prompt with the join code filled in.

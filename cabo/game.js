@@ -83,6 +83,8 @@ class Game {
     this.caboCallerId = null;
     this.status = 'peek'; // peek | playing | finished
     this.log = [];
+    this.moves = []; // public feed of what just happened, so every client can show it: { seq, type, actorId, cards, text }
+    this.seq = 0;
     this.reveals = []; // outbox, drained by the server: { to, cards, reason, sticky }
     this.result = null;
 
@@ -102,13 +104,35 @@ class Game {
   // ───────────────────────── helpers ─────────────────────────
 
   initialPeekCards(playerId) {
-    const hand = this._player(playerId).hand;
+    const hand = this._player(playerId).hand.filter(Boolean);
     return hand.slice(Math.max(0, hand.length - INITIAL_PEEK));
+  }
+
+  // Hands are fixed slots laid out two per row. A card that leaves a hand
+  // leaves an empty slot behind; a card that arrives takes the first empty
+  // slot, or a new one at the end.
+  _count(player) {
+    return player.hand.filter(Boolean).length;
+  }
+
+  _addCard(player, card) {
+    const empty = player.hand.indexOf(null);
+    if (empty === -1) player.hand.push(card);
+    else player.hand[empty] = card;
+    return empty === -1 ? player.hand.length - 1 : empty;
   }
 
   _log(text) {
     this.log.push({ t: Date.now(), text });
     if (this.log.length > 80) this.log.shift();
+  }
+
+  // Record a public move (also logged). `cards` are {ownerId, cardId} slots
+  // involved, as they are after the move, so clients can point at them.
+  _move(type, actorId, cards, text) {
+    this.moves.push({ seq: ++this.seq, type, actorId, cards, text, t: Date.now() });
+    if (this.moves.length > 12) this.moves.shift();
+    this._log(text);
   }
 
   _reveal(to, cards, reason, sticky = false) {
@@ -135,7 +159,7 @@ class Game {
 
   _findCard(ownerId, cardId) {
     const owner = this._player(ownerId);
-    const index = owner.hand.findIndex((c) => c.id === cardId);
+    const index = owner.hand.findIndex((c) => c && c.id === cardId);
     if (index === -1) throw new Error('That card is no longer there.');
     return { owner, card: owner.hand[index], index };
   }
@@ -147,15 +171,10 @@ class Game {
     if (phase && this.phase !== phase) throw new Error("You can't do that right now.");
   }
 
+  // Every card is used once: there is no reshuffle. When the draw pile is
+  // empty the game ends at the next turn change.
   _drawFromDeck() {
-    if (this.deck.length === 0) {
-      if (this.discard.length <= 1) return null;
-      const top = this.discard.pop();
-      this.deck = shuffle(this.discard);
-      this.discard = [top];
-      this._log('Draw pile empty. The played pile was reshuffled into a new draw pile.');
-    }
-    return this.deck.pop();
+    return this.deck.length ? this.deck.pop() : null;
   }
 
   _beginPlay() {
@@ -167,7 +186,7 @@ class Game {
   }
 
   _checkEmptyHands() {
-    const empty = this.players.find((p) => p.hand.length === 0);
+    const empty = this.players.find((p) => this._count(p) === 0);
     if (empty) {
       this._finish(`${empty.name} has no cards left.`);
       return true;
@@ -190,6 +209,10 @@ class Game {
     this.held = null;
     this.power = null;
     if (this._checkEmptyHands()) return;
+    if (this.deck.length === 0) {
+      this._finish('The draw pile is empty.');
+      return;
+    }
     const next = (this.turn + 1) % this.players.length;
     if (this.caboCallerId && this.players[next].id === this.caboCallerId) {
       this._finish(`The round is over: ${this.players[next].name} called Cabo.`);
@@ -208,8 +231,8 @@ class Game {
     const scores = this.players.map((p) => ({
       id: p.id,
       name: p.name,
-      total: p.hand.reduce((s, c) => s + c.value, 0),
-      cards: p.hand.map(publicCard),
+      total: p.hand.filter(Boolean).reduce((s, c) => s + c.value, 0),
+      cards: p.hand.filter(Boolean).map(publicCard),
       calledCabo: p.id === this.caboCallerId,
     }));
     const best = Math.min(...scores.map((s) => s.total));
@@ -220,10 +243,10 @@ class Game {
   }
 
   _powerFeasible(type, actor) {
-    const opponentsWithCards = this.players.some((p) => p.id !== actor.id && p.hand.length > 0);
-    if (type === 'peekOwn') return actor.hand.length > 0;
+    const opponentsWithCards = this.players.some((p) => p.id !== actor.id && this._count(p) > 0);
+    if (type === 'peekOwn') return this._count(actor) > 0;
     if (type === 'peekOther') return opponentsWithCards;
-    return actor.hand.length > 0 && opponentsWithCards;
+    return this._count(actor) > 0 && opponentsWithCards;
   }
 
   _afterDiscard(actor, card) {
@@ -266,7 +289,7 @@ class Game {
     this._requireTurn(playerId, 'draw');
     if (this.caboCallerId) throw new Error('Cabo has already been called.');
     this.caboCallerId = playerId;
-    this._log(`${this._current().name} calls CABO! Everyone else gets one last turn.`);
+    this._move('cabo', playerId, [], `${this._current().name} calls CABO! Everyone else gets one last turn.`);
     this._advanceTurn();
   }
 
@@ -280,7 +303,7 @@ class Game {
     }
     this._markSeen(card, playerId);
     this.held = { card };
-    this._log(`${actor.name} draws a card.`);
+    this._move('draw', playerId, [], `${actor.name} draws a card.`);
     this.phase = 'hold';
   }
 
@@ -290,7 +313,7 @@ class Game {
     const card = this.held.card;
     this._markSeen(card, 'all');
     this.discard.push(card);
-    this._log(`${actor.name} plays the ${cardName(card)}.`);
+    this._move('play', playerId, [], `${actor.name} plays the ${cardName(card)}.`);
     this._afterDiscard(actor, card);
   }
 
@@ -301,7 +324,8 @@ class Game {
     actor.hand[index] = this.held.card;
     this._markSeen(old, 'all');
     this.discard.push(old);
-    this._log(`${actor.name} takes the drawn card and plays the ${cardName(old)} from their hand.`);
+    this._move('place', playerId, [{ ownerId: playerId, cardId: this.held.card.id }],
+      `${actor.name} keeps the drawn card and plays the ${cardName(old)} from their hand.`);
     this._afterDiscard(actor, old);
   }
 
@@ -326,7 +350,7 @@ class Game {
       const { card } = this._findCard(playerId, payload.cardId);
       this._markSeen(card, playerId);
       this._reveal(playerId, [{ ownerId: playerId, ...publicCard(card) }], 'Your card');
-      this._log(`${actor.name} peeks at one of their own cards.`);
+      this._move('peek', playerId, [{ ownerId: playerId, cardId: card.id }], `${actor.name} looks at one of their own cards.`);
       this._startSettle();
       return;
     }
@@ -336,7 +360,7 @@ class Game {
       const { owner, card } = this._findCard(payload.playerId, payload.cardId);
       this._markSeen(card, playerId);
       this._reveal(playerId, [{ ownerId: owner.id, ...publicCard(card) }], `${owner.name}'s card`);
-      this._log(`${actor.name} peeks at one of ${owner.name}'s cards.`);
+      this._move('peek', playerId, [{ ownerId: owner.id, cardId: card.id }], `${actor.name} looks at one of ${owner.name}'s cards.`);
       this._startSettle();
       return;
     }
@@ -349,7 +373,10 @@ class Game {
       if (mine.card.seenBy.includes(playerId)) throw new Error("You've already seen that card of yours, so it can't be blind swapped.");
       if (theirs.card.seenBy.includes(playerId)) throw new Error("You've already seen that card, so it can't be blind swapped.");
       this._swapCards(mine, theirs);
-      this._log(`${actor.name} blind swaps a card with ${theirs.owner.name}.`);
+      this._move('swap', playerId, [
+        { ownerId: playerId, cardId: theirs.card.id },
+        { ownerId: theirs.owner.id, cardId: mine.card.id },
+      ], `${actor.name} blind swaps a card with ${theirs.owner.name}.`);
       this._startSettle();
       return;
     }
@@ -365,7 +392,10 @@ class Game {
         { ownerId: playerId, ...publicCard(mine.card) },
         { ownerId: theirs.owner.id, ...publicCard(theirs.card) },
       ], 'Swap them?');
-      this._log(`${actor.name} looks at one of their cards and one of ${theirs.owner.name}'s.`);
+      this._move('look', playerId, [
+        { ownerId: playerId, cardId: mine.card.id },
+        { ownerId: theirs.owner.id, cardId: theirs.card.id },
+      ], `${actor.name} looks at one of their cards and one of ${theirs.owner.name}'s.`);
       return;
     }
 
@@ -384,7 +414,10 @@ class Game {
     const mine = this._findCard(playerId, this.power.myCardId);
     const theirs = this._findCard(this.power.theirPlayerId, this.power.theirCardId);
     this._swapCards(mine, theirs);
-    this._log(`${actor.name} swaps a card with ${theirs.owner.name}.`);
+    this._move('swap', playerId, [
+      { ownerId: playerId, cardId: theirs.card.id },
+      { ownerId: theirs.owner.id, cardId: mine.card.id },
+    ], `${actor.name} swaps a card with ${theirs.owner.name}.`);
     this._startSettle();
   }
 
@@ -398,14 +431,15 @@ class Game {
     const { owner, card, index } = this._findCard(ownerId, cardId);
 
     if (card.rank === top.rank) {
-      owner.hand.splice(index, 1);
+      owner.hand[index] = null; // the slot stays empty
       this._markSeen(card, 'all');
       this.discard.push(card);
       const whose = owner.id === playerId ? 'their own' : `${owner.name}'s`;
-      this._log(`${snapper.name} matches ${whose} ${cardName(card)} with the ${top.rank} on the pile!`);
+      this._move('match', playerId, [{ ownerId: owner.id, slot: index }],
+        `${snapper.name} matches ${whose} ${cardName(card)} with the ${top.rank} on the pile!`);
       for (const p of this.players) p.ready = false; // everyone gets a look at the new state
 
-      if (owner.id !== playerId && snapper.hand.length > 0) {
+      if (owner.id !== playerId && this._count(snapper) > 0) {
         this.pendingGive = { from: playerId, to: owner.id };
         this._log(`${snapper.name} must give ${owner.name} one of their cards.`);
       } else {
@@ -418,10 +452,11 @@ class Game {
     const whoseCard = owner.id === playerId ? 'their own' : `${owner.name}'s`;
     const penalty = this._drawFromDeck();
     if (penalty) {
-      snapper.hand.push(penalty);
-      this._log(`${snapper.name} guessed wrong on ${whoseCard} card and draws a penalty card.`);
+      this._addCard(snapper, penalty);
+      this._move('penalty', playerId, [{ ownerId: playerId, cardId: penalty.id }],
+        `${snapper.name} guessed wrong on ${whoseCard} card and draws a penalty card.`);
     } else {
-      this._log(`${snapper.name} guessed wrong on ${whoseCard} card. No cards left for a penalty.`);
+      this._move('penalty', playerId, [], `${snapper.name} guessed wrong on ${whoseCard} card. No cards left for a penalty.`);
     }
   }
 
@@ -430,10 +465,10 @@ class Game {
     const giver = this._player(playerId);
     const receiver = this._player(this.pendingGive.to);
     const { index, card } = this._findCard(playerId, cardId);
-    giver.hand.splice(index, 1);
-    receiver.hand.push(card);
+    giver.hand[index] = null;
+    this._addCard(receiver, card);
     this.pendingGive = null;
-    this._log(`${giver.name} gives ${receiver.name} a card.`);
+    this._move('give', playerId, [{ ownerId: receiver.id, cardId: card.id }], `${giver.name} gives ${receiver.name} a card.`);
     this._checkEmptyHands();
   }
 
@@ -467,15 +502,16 @@ class Game {
         id: p.id,
         name: p.name,
         ready: p.ready,
-        cardCount: p.hand.length,
+        cardCount: this._count(p),
         cards: p.hand.map((c) => {
+          if (!c) return null; // empty slot
           const seenByMe = c.seenBy.includes(playerId);
           const out = { id: c.id, seenByMe };
           if (finished) out.known = publicCard(c);
           return out;
         }),
       })),
-      log: this.log.slice(-40),
+      moves: this.moves.slice(-8),
       result: this.result,
     };
   }
